@@ -9,14 +9,10 @@ exports.createConnection = async function (config) {
 		database: config.database,
 	}
 
-	//console.log('configsss', config)
-
 	return new Promise((resolve, reject) => {
 
 		var connection = mysql.createConnection(config);
 		connection.connect(function (err, result) {
-			console.log('errr', err)
-
 			if (err) {
 				reject({
 					message: err,
@@ -31,11 +27,10 @@ exports.createConnection = async function (config) {
 		});
 	}).catch(error => {
 
-		//	console.log('errr', error)
-		/*return {
-		message: error,
-		status:0         
-  };*/
+		reject({
+			message: error,
+			status: 0
+		});
 	});
 }
 
@@ -174,56 +169,27 @@ exports.getTableResultSet = async function (data,no_of_rows=null) {
 	});
 }
 exports.getUniqueCol = async function (data,table) {
-	//var data = req.body
-	return new Promise(async (resolve, reject) => {
 
-		//console.log('data.dbDetails')
+	return new Promise(async (resolve, reject) => {
 		var db = await makeConnection({
 			host: data.host,
 			user: data.username,
 			password: data.password,
-			database: data.database,
-
-
+			database: data.database
 		});
-
-
 		if (db && db.status == 1) {
-
-			
-
 			db.connection.query("SELECT K.COLUMN_NAME,T.CONSTRAINT_TYPE FROM  INFORMATION_SCHEMA.TABLE_CONSTRAINTS T JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE K ON K.CONSTRAINT_NAME=T.CONSTRAINT_NAME  WHERE K.TABLE_NAME='"+table+"' group by K.COLUMN_NAME,T.CONSTRAINT_TYPE"
 			, function (error, results) {
 
-				console.log('fields', error,results)
-
 				if(results.length >0 ){
-					//var ifPrimary = ;results.filter((e)=>e.CONSTRAINT_TYPE== 'PRIMARY KEY')
-					//var ifUNique = results.filter((e)=>e.CONSTRAINT_TYPE== 'UNIQUE');
-					// if(ifPrimary.length>0){
-					// 	resolve({ column_name: ifPrimary[0].COLUMN_NAME, fields: ifPrimary[0].CONSTRAINT_TYPE })
-					// }else if(ifUNique.length>0){
-					// 	resolve({ column_name: ifUNique[0].COLUMN_NAME, fields: ifUNique[0].CONSTRAINT_TYPE })
-					// }else{
-					// 	reject(0)
-					// }
 					var cols = results.map((e)=>e.COLUMN_NAME)
-console.log(cols,'cols')
 					resolve({ cols: cols })
 				}else{
 					reject(0)
 				}
-				// if (error) {
-				// 	console.log('err', error)
-				// 	reject(0)
-				// } else {
-				// 	resolve({ results: results, fields: fields })
-				// }
 			});
 
-
 		} else {
-
 			reject(0)
 		}
 	});

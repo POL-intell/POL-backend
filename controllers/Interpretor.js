@@ -8,7 +8,6 @@ var async = require('async');
 exports.execuatePoll = async function (req, res) {
 
   var functions = req.body.functions;
-  console.log(functions, 'functionsfunctions')
   var execPoll = req.body.execPoll;
   var tables_information = req.body.tables
 
@@ -19,10 +18,7 @@ exports.execuatePoll = async function (req, res) {
     for (var f = 0; f < functions.length; f++) {
       var fn = functions[f];
       var output_table_info = functions[f].table;
-      var output_table_info_limit = output_table_info.limit?output_table_info.limit:20;
-
-      console.log(output_table_info, 'output_table_info')
-
+      var output_table_info_limit = output_table_info.limit ? output_table_info.limit : 20;
       var resultSet = [];
       var fields = [];
       var existResultSet = resultSetData.filter((t) => t.virtual_table == output_table_info.name)
@@ -127,7 +123,7 @@ exports.execuatePoll = async function (req, res) {
           try {
             //   console.log(col_position,row_position,inner_result_set)
             var col_row_value = await DBHelper.getValueFromResultSet(inner_result_set, row_position, col_position, edge_point);
-           // console.log('col_row_value', col_row_value)
+            // console.log('col_row_value', col_row_value)
             pointer_values.push(col_row_value)
             pskeleton = pskeleton.replace('~', col_row_value);
 
@@ -164,7 +160,7 @@ exports.execuatePoll = async function (req, res) {
         status: 1,
         data: resultSet,
         output_table: output_table_info.name,
-        output_table_detail:output_table_info
+        output_table_detail: output_table_info
       })
 
     }
@@ -314,7 +310,7 @@ exports.commitPoll = async function (req, res) {
           try {
             //   console.log(col_position,row_position,inner_result_set)
             var col_row_value = await DBHelper.getValueFromResultSet(inner_result_set, row_position, col_position, edge_point);
-          //  console.log('col_row_value', col_row_value)
+            //  console.log('col_row_value', col_row_value)
             pointer_values.push(col_row_value)
             pskeleton = pskeleton.replace('~', col_row_value);
 
@@ -354,7 +350,7 @@ exports.commitPoll = async function (req, res) {
               //update table columns cells
               batchOperationCounter++
               try {
-                console.log(i,M)
+                console.log(i, M)
                 await batchOperationData.push({ 'where': wherecolVal, 'output_field': v, 'value': result, 'db_connection': output_table_db_connection, 'output_table_info': output_table_info });
                 if (batchOperationCounter == 50000 || i == M) {
 
@@ -362,8 +358,7 @@ exports.commitPoll = async function (req, res) {
                   console.log('created batch')
                   batchOperationCounter = 0
                   batches.push(batch(1000, batchOperationData))
-                  // await DBHelper.updateTableCell(output_table_db_connection, output_table_info, v, result, whereCol, wherecolVal)
-                  //await DBHelper.updateTableCell(output_table_db_connection, output_table_info, v,batchOperationData)
+                
                   batchOperationData = [];
                 }
 
@@ -382,7 +377,7 @@ exports.commitPoll = async function (req, res) {
       async.series(batches, function (err, results) {
         if (err) console.log("Done! Error: ", err);
         console.log(new Date());
-        console.log('results',results)
+        console.log('results', results)
       });
 
       final_res.push({
@@ -397,7 +392,7 @@ exports.commitPoll = async function (req, res) {
       data: final_res
     });
   } catch (e) {
-    console.log(e,'eeee')
+    console.log(e, 'eeee')
     res.status(200).send({
       status: 1,
       data: final_res
@@ -406,7 +401,7 @@ exports.commitPoll = async function (req, res) {
 }
 
 function batch(parallelLimit, data) {
- 
+
   return function (cb) {
     var toDo = [];
     console.log('in batchhhh')
@@ -421,7 +416,7 @@ function batch(parallelLimit, data) {
         console.log("Error2", err);
         cb(err);
       } else {
-        console.log('else err',result,err)
+        console.log('else err', result, err)
         cb()
       }
     });
@@ -429,15 +424,15 @@ function batch(parallelLimit, data) {
   }
 }
 
- function process(data) {
+function process(data) {
 
   var db = data.db_connection;
   var updateCol = data.output_field;
   var val = data.value;
   console.log('ghghghg')
-  
 
-   return function (cb) {
+
+  return function (cb) {
 
     if (db && db.status == 1) {
 
@@ -461,7 +456,7 @@ function batch(parallelLimit, data) {
         if (error) {
           console.log(error)
         } else {
-         
+
         }
       });
     } else {
