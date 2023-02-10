@@ -5,6 +5,7 @@ var DBHelper = require('../helpers/db');
 /* GET home page. */
 
 
+//Add database and create connection to check id DB is connectting or not
 exports.addDatabase = async function (req, res) {
 
   var data = req.body
@@ -24,6 +25,8 @@ exports.addDatabase = async function (req, res) {
   }
 };
 
+
+//get the table slist from database details
 exports.getTables = async function (req, res) {
 
   var data = req.body
@@ -57,6 +60,8 @@ exports.getTables = async function (req, res) {
   }
 };
 
+
+//get the table slist from database details
 exports.listTables = async function (req, res) {
   let { db_id } = req.params;
   let db = await Database.where({ 'id': db_id }).fetch();
@@ -65,8 +70,6 @@ exports.listTables = async function (req, res) {
 
 
   let connection = DB.connection;
-
-
   connection.query("SELECT table_name, table_rows FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = " + db.database, function (error, results, fields) {
     if (error) {
       res.status(500).send({
@@ -81,11 +84,9 @@ exports.listTables = async function (req, res) {
     }
   });
   connection.end();
-
-
-
 }
 
+//get the meta data of table
 exports.getMetaData = async function (req, res) {
   let { table } = req.params;
   try {
@@ -103,6 +104,7 @@ exports.getMetaData = async function (req, res) {
   }
 }
 
+//get the data from a table 
 exports.getTableData = async function (req, res) {
   let { table } = req.params;
   var db = req.body;
@@ -145,6 +147,7 @@ exports.getTableData = async function (req, res) {
 
 };
 
+//get the sql result of a table
 exports.getSqlData = async function (req, res) {
 
   var db = req.body.dbDetails;
@@ -178,67 +181,9 @@ exports.getSqlData = async function (req, res) {
 
 };
 
-exports.insert = async function (req, res) {
-  let { table } = req.params;
 
-  var DB = DBHelper.createConnection({
-    host: '104.198.98.208',
-    username: 'roots',
-    password: "roots@123",
-    database: 'operations',
-
-  });
-
-
-  DB.then((result) => {
-
-    var connection = result.connection
-    for (var i = 1; i <= 1000; i++) {
-
-   
-      var q = "INSERT INTO   try   (c1,c3) VALUES ";
-      for (var j = 1; j <= 500; j++) {
-        let posts = {
-
-          "c1": Math.floor(Math.random() * (999 - 100 + 1) + 100),
-          "c3": Math.floor(Math.random() * (999 - 100 + 1) + 100)
-        };
-
-        q = q + ' ( ' + Math.floor(Math.random() * (999 - 100 + 1) + 100) + ' , '
-        q = q + Math.floor(Math.random() * (999 - 100 + 1) + 100) + ' ) ';
-        if (j < 500) {
-          q = q + ','
-        }
-
-      }
-
-      //  q=
-      console.log(q);
-      // return;
-      let post = {};
-      connection.query(q, post, function (error, results, fields) {
-
-        console.log('error', error, results)
-
-      });
-
-    }
-    connection.end();
-
-  }).catch((error) => {
-    console.log(error, 'errorerror')
-    res.status(500).send({
-
-      message: error,
-      status: 0
-    });
-  })
-
-};
-
+//Get the value of cell by  row and col
 exports.getColRowValue = async function (req, res) {
-
-
   var db = req.body.dbDetails;
   let { table, col, row } = req.params;
 
@@ -261,7 +206,7 @@ exports.getColRowValue = async function (req, res) {
     database: db.database,
 
   });
-  
+
   DB.then((result) => {
     var connection = result.connection;
 
@@ -301,52 +246,7 @@ exports.getColRowValue = async function (req, res) {
 
 };
 
-exports.interpretor = async function (req, res) {
 
-  var RSRC = 7;
-  var fc = "Table1:[4,0]=Table1:[-1,0]+Table1:[0,-1]";
-
-  var left_side = fc.split(']=')[0].split(':[').pop()
-  var output_col = left_side[0]
-  var EP = left_side[2]
-
-  var right_side = fc.split(']=')[1].split(']').map((t) => t.split(':[').pop());
-  right_side = right_side.filter(n => n)
-  console.log('left side of function', left_side)
-  console.log('right side of function', right_side)
-
-  for (var i = 1; i <= RSRC; i++) {
-
-    for (var r = 0; r < right_side.length; r++) {
-
-      var pointer = right_side[r].split(',');
-      var col = parseInt(output_col) + parseInt(pointer[0]);
-      var row = i + parseInt(pointer[1]);
-    }
-    console.log('--')
-
-  }
-
-};
-exports.skeleton = async function (req, res) {
-
-
-  var fc = "Table1:[4,0]=Table1:[-1,0]+Table1:[0,-1]-Table2:[0,-1]";
-  var pointers = fc.split(']=')[1].split(']');
-  var skeletons = '';
-  for (var i = 0; i < pointers.length; i++) {
-    if (pointers[i] != '') {
-
-      if (i == 0) {
-        skeletons = '~';
-      } else {
-        skeletons = skeletons + pointers[i][0] + '~';
-      }
-    }
-  }
-
-  return skeletons;
-}
 
 async function getTableResultSet(data) {
   //var data = req.body
@@ -376,30 +276,8 @@ async function getTableResultSet(data) {
   });
 }
 
-// async function updateTableCell(db, output_table_info, updateCol, val, wherecol, wherecolVal) {
 
-//   return new Promise(async (resolve, reject) => {
-
-//     if (db && db.status == 1) {
-
-//       var query = 'update ' + output_table_info.dbTable + ' set ' + updateCol + '=' + val + ' where ' + wherecol + '=' + wherecolVal
-
-//       db.connection.query(query, function (error, results, fields) {
-//         if (error) {
-//           reject(0)
-//         } else {
-//           resolve(results)
-//         }
-//       });
-
-
-//     } else {
-
-//       reject(0)
-//     }
-//   });
-// }
-
+//rollback function get the output table and get the results from db and send them back
 exports.rollbackPoll = async function (req, res) {
   var data = req.body;
   var output = [];
@@ -420,6 +298,7 @@ exports.rollbackPoll = async function (req, res) {
 }
 
 
+//Add pol column in the table
 exports.addPolColumn = async function (req, res) {
   let { table } = req.params;
   try {

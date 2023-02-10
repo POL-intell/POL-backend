@@ -7,30 +7,32 @@ var AuthController = require('../controllers/AuthController');
 var auth_middleware = require('../middleware/auth');
 var AdminController = require('../controllers/AdminController');
 
+//to check the database connection if its connected or not
 router.all('/add/database', DBController.addDatabase);
+//get the tables list of a particular table
 router.all('/getTables', DBController.getTables);
-
-
+//get the tables list of a particular table
 router.all('/tables/:db_id', DBController.listTables);
+//to get the data from a table
 router.all('/getResults/:table' , DBController.getTableData);
+//to get the meta data about a database table
 router.all('/getMetaData/:table' , DBController.getMetaData);
+//to get the result of sql statement - data link
 router.all('/getSqlData' , DBController.getSqlData);
-
+//to get the value of one particular set by row and col value
 router.all('/getValue/:table/:col/:row', DBController.getColRowValue);
 
 //router.all('/execuatePoll', DBController.execuatePoll);
+//to exceute the pol function
 router.all('/execuatePoll', Interpretor.execuatePoll);
-
+//Commit the pol function executation
 router.all('/commitPoll', Interpretor.commitPoll);
+//Rollback the pol function
 router.all('/rollbackPoll', DBController.rollbackPoll);
+//Add pol column to table 
 router.all('/addPolColumn/:table', DBController.addPolColumn);
 
 
-
-router.get('/interpretor' , DBController.interpretor);
-router.get('/skeleton' , DBController.skeleton);
-
-router.get('/insert' , DBController.insert);
 
 //auth and payment
 router.post('/register' , AuthController.register);

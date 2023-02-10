@@ -1,5 +1,6 @@
 var mysql = require('mysql2');
 
+//create connection to database by host,user,password and database. For this mysql2 package is used tomake connection to mysql 
 exports.createConnection = async function (config) {
 
 	config = {
@@ -40,7 +41,6 @@ async function makeConnection(config) {
 
 		var connection = mysql.createConnection(config);
 		connection.connect(function (err, result) {
-		//	console.log('errr connection', err)
 
 			if (err) {
 				reject({
@@ -64,6 +64,8 @@ async function makeConnection(config) {
 	});
 }
 
+
+//get the columns of a table
 exports.getTableColumns = async function (config) {
 
 	var result = await makeConnection(config);
@@ -88,7 +90,8 @@ exports.getTableColumns = async function (config) {
 	});
 }
 
-exports.addPolColumn= async function(data,table){
+//Add pol column to a table
+exports.addPolColumn = async function (data, table) {
 	return new Promise(async (resolve, reject) => {
 
 		//console.log('data.dbDetails')
@@ -103,8 +106,8 @@ exports.addPolColumn= async function(data,table){
 
 
 		if (db && db.status == 1) {
-      
-      db.connection.query("ALTER TABLE "+table+" ADD COLUMN pol int AUTO_INCREMENT PRIMARY KEY", function (error, results, fields) {
+
+			db.connection.query("ALTER TABLE " + table + " ADD COLUMN pol int AUTO_INCREMENT PRIMARY KEY", function (error, results, fields) {
 
 				//console.log('fields', fields[0].name)
 				if (error) {
@@ -115,13 +118,14 @@ exports.addPolColumn= async function(data,table){
 				}
 			});
 
-    }else{
-		reject(0)
-    }
-  });
+		} else {
+			reject(0)
+		}
+	});
 }
 
-exports.getTableResultSet = async function (data,no_of_rows=null) {
+//get the result set from table 
+exports.getTableResultSet = async function (data, no_of_rows = null) {
 	//var data = req.body
 	return new Promise(async (resolve, reject) => {
 
@@ -138,15 +142,15 @@ exports.getTableResultSet = async function (data,no_of_rows=null) {
 
 		if (db && db.status == 1) {
 
-			var limit="";
-			if(no_of_rows){
-				limit = " LIMIT "+ no_of_rows
+			var limit = "";
+			if (no_of_rows) {
+				limit = " LIMIT " + no_of_rows
 			}
-			var from =0;
+			var from = 0;
 			var sql = "SELECT * from " + data.dbTable + limit;
-			if(data.start_index){
-			
-				sql = "SELECT * from `" + data.dbTable + "` LIMIT " +data.start_index+" , "+ no_of_rows+" "
+			if (data.start_index) {
+
+				sql = "SELECT * from `" + data.dbTable + "` LIMIT " + data.start_index + " , " + no_of_rows + " "
 			}
 			console.log("SELECT * from " + data.dbTable + limit)
 
@@ -168,7 +172,9 @@ exports.getTableResultSet = async function (data,no_of_rows=null) {
 		}
 	});
 }
-exports.getUniqueCol = async function (data,table) {
+
+//get and return if there is some unique,primary etc column exist or not
+exports.getUniqueCol = async function (data, table) {
 
 	return new Promise(async (resolve, reject) => {
 		var db = await makeConnection({
@@ -178,22 +184,24 @@ exports.getUniqueCol = async function (data,table) {
 			database: data.database
 		});
 		if (db && db.status == 1) {
-			db.connection.query("SELECT K.COLUMN_NAME,T.CONSTRAINT_TYPE FROM  INFORMATION_SCHEMA.TABLE_CONSTRAINTS T JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE K ON K.CONSTRAINT_NAME=T.CONSTRAINT_NAME  WHERE K.TABLE_NAME='"+table+"' group by K.COLUMN_NAME,T.CONSTRAINT_TYPE"
-			, function (error, results) {
+			db.connection.query("SELECT K.COLUMN_NAME,T.CONSTRAINT_TYPE FROM  INFORMATION_SCHEMA.TABLE_CONSTRAINTS T JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE K ON K.CONSTRAINT_NAME=T.CONSTRAINT_NAME  WHERE K.TABLE_NAME='" + table + "' group by K.COLUMN_NAME,T.CONSTRAINT_TYPE"
+				, function (error, results) {
 
-				if(results.length >0 ){
-					var cols = results.map((e)=>e.COLUMN_NAME)
-					resolve({ cols: cols })
-				}else{
-					reject(0)
-				}
-			});
+					if (results.length > 0) {
+						var cols = results.map((e) => e.COLUMN_NAME)
+						resolve({ cols: cols })
+					} else {
+						reject(0)
+					}
+				});
 
 		} else {
 			reject(0)
 		}
 	});
 }
+
+//get the val;ue of cell by row and col value
 exports.getValueFromResultSet = async function (resultSet, row, col, edge_point = 0) {
 
 	return new Promise((resolve, reject) => {
@@ -204,11 +212,7 @@ exports.getValueFromResultSet = async function (resultSet, row, col, edge_point 
 			var c = 0;
 			for (const v in resultSet[row]) {
 				if (c == col) {
-					// if (edge_point == 0) {
-					// 	resolve(resultSet[row][v] == null ? null : resultSet[row][v]);
-					// } else {
-					// 	resolve(resultSet[row][v] == null ? 0 : resultSet[row][v]);
-					// }
+
 					resolve(resultSet[row][v] == null ? 0 : resultSet[row][v]);
 				}
 				c++;
@@ -229,9 +233,11 @@ exports.getValueFromResultSet = async function (resultSet, row, col, edge_point 
 
 }
 
+
+//to make the function buffer
 exports.makeFunctionbuffer = async function (fn, tableInfo) {
 
-//	console.log('fn', fn)
+
 	return new Promise((resolve, reject) => {
 
 		var fn_buffer = [];
@@ -241,39 +247,39 @@ exports.makeFunctionbuffer = async function (fn, tableInfo) {
 		right_side = right_side.split(" ").join("")
 		var left_side = fn.split('=')[0];
 
-		var pointers_arr=[];
-		var string="";
-		var last_operator="";
+		var pointers_arr = [];
+		var string = "";
+		var last_operator = "";
 		//console.log('rrrrrr',right_side)
-		for(p=0;p<right_side.length;p++){
+		for (p = 0; p < right_side.length; p++) {
 			var txt = right_side[p];
-			
+
 			//console.log(right_side[p],'rrrrr ppp',right_side[p-1])
-			
-			
-			if( (txt=='+' || txt=='-' || txt=='/' || txt=='*') && (right_side[p-1]==']' || !isNaN(string))){
+
+
+			if ((txt == '+' || txt == '-' || txt == '/' || txt == '*') && (right_side[p - 1] == ']' || !isNaN(string))) {
 				//console.log('herreeeee',string,last_operator)
-					if(pointers_arr.length>0){
-						pointers_arr.push(last_operator+string);
-					}else{
-						pointers_arr.push(string);
-					}
-					last_operator = txt
-					
-				string= ""
-				
-			}else{
+				if (pointers_arr.length > 0) {
+					pointers_arr.push(last_operator + string);
+				} else {
+					pointers_arr.push(string);
+				}
+				last_operator = txt
+
+				string = ""
+
+			} else {
 				//console.log('elseeeee',txt)
-				string = string+txt;
+				string = string + txt;
 			}
 
-			
+
 
 		}
-		pointers_arr.push(last_operator+string);
+		pointers_arr.push(last_operator + string);
 
-		console.log(pointers_arr,'pointers_arr')
-		
+		console.log(pointers_arr, 'pointers_arr')
+
 		var output_column = left_side.split('(')[1].split(',')[0];
 		var edge_point = left_side.split('(')[1].split(',')[1].split(')')[0];
 		var pointers = pointers_arr;
@@ -313,31 +319,31 @@ exports.makeFunctionbuffer = async function (fn, tableInfo) {
 				var ptr = pointers[p];
 				//if any operator is in starting
 				var is_pointer = ptr.charAt(0);
-				if(is_pointer=='+' || is_pointer=='-' || is_pointer=='/' || is_pointer=='*'){
-					ptr = ptr.replace(is_pointer,'');
+				if (is_pointer == '+' || is_pointer == '-' || is_pointer == '/' || is_pointer == '*') {
+					ptr = ptr.replace(is_pointer, '');
 				}
 
 
-				if(!isNaN(ptr)){
+				if (!isNaN(ptr)) {
 					fn_buffer.push({
 						vTable: tableInfo,
 						output_column: output_column,
-						value:ptr
-						
+						value: ptr
+
 					});
-					if(p>0){
-						if(last_num_pointer){
-							skeleton = skeleton  + pointers[p];
-						}else{
+					if (p > 0) {
+						if (last_num_pointer) {
+							skeleton = skeleton + pointers[p];
+						} else {
 							skeleton = skeleton + '~' + pointers[p];
 						}
-						
-						
-					}else{
+
+
+					} else {
 						skeleton = skeleton + pointers[p];
 					}
 					last_num_pointer = true
-				}else{
+				} else {
 					//console.log('ptrptrptrptr',ptr)
 					//var ptr = pointers[p].replace(pointers[p].charAt(0),'');
 
@@ -346,19 +352,19 @@ exports.makeFunctionbuffer = async function (fn, tableInfo) {
 
 					if (p > 0) {
 						//vTable = ptr.split(':')[0].slice(1);
-						if(last_num_pointer){
-							skeleton = skeleton +  pointers[p].split(':')[0].charAt(0);
-						}else{
+						if (last_num_pointer) {
+							skeleton = skeleton + pointers[p].split(':')[0].charAt(0);
+						} else {
 							skeleton = skeleton + '~' + pointers[p].split(':')[0].charAt(0);
 						}
 						last_num_pointer = false
 					}
 
-					 var p_col = ptr.split(':[')[1].split(',')[0];
+					var p_col = ptr.split(':[')[1].split(',')[0];
 					// console.log(ptr.split(',')[1],parseInt(ptr.split(',')[1]),'pointers[p]')
-					 var p_row = ptr.split(',')[1].split(']')[0];
+					var p_row = ptr.split(',')[1].split(']')[0];
 
-					 console.log(output_column,p_col,'ooooooooooooooooooooo')
+					console.log(output_column, p_col, 'ooooooooooooooooooooo')
 					var cp = parseInt(output_column) + parseInt(p_col)
 					var rr = p_row
 					fn_buffer.push({
@@ -374,101 +380,87 @@ exports.makeFunctionbuffer = async function (fn, tableInfo) {
 			//console.log('skeleton',skeleton)
 		}
 
-		console.log('fn_buffer',skeleton,fn_buffer)
-		if(!last_num_pointer){
+		console.log('fn_buffer', skeleton, fn_buffer)
+		if (!last_num_pointer) {
 			skeleton = skeleton + '~';
 		}
-		console.log('skeleton',skeleton)
-		resolve({ fn_buffer: fn_buffer, skeleton: skeleton , edge_point: edge_point })
+		console.log('skeleton', skeleton)
+		resolve({ fn_buffer: fn_buffer, skeleton: skeleton, edge_point: edge_point })
 
 	});
 }
 
 exports.addbits = async function (s) {
-	
+
 	if (s.indexOf(null) > -1) {
-	
+
 		return null;
-	}else{
-		
-		try{
+	} else {
+
+		try {
 			var re = /^[-+]?[0-9]+\.[0-9]+$/;
 			var cal = eval(s);
-			if(cal.toString().match( re )){
+			if (cal.toString().match(re)) {
 				return trailing_zeros(cal);
-			}else{
+			} else {
 				return cal;
 			}
-		
-		}catch(e){
+
+		} catch (e) {
 			//console.log('err addbit',e)
 			return 0;
-		
+
 		}
 	}
 }
 
+//update table cell via batch
+
 //exports.updateTableCell = async function(db, output_table_info, updateCol, val, wherecol, wherecolVal) {
-exports.updateTableCell = async function(db, output_table_info, updateCol, batchOperationData) {	
-	
-	console.log('idhr')
+exports.updateTableCell = async function (db, output_table_info, updateCol, batchOperationData) {
+
+
 	return new Promise(async (resolve, reject) => {
-  console.log('db',db)
-	  if (db && db.status == 1) {
 
-		var val = batchOperationData.value;
+		if (db && db.status == 1) {
 
-		//var where=' where ';
-		// for(w=0;w<wherecolVal.length;w++){
-		// 	if(w>0){
-		// 		where = where+' and ';
-		// 	}
-		// 	where = where+ ' '+ wherecolVal[w].col +'= '+wherecolVal[w].val+' ';
-		// }
-		
-
-		
-			var where = ' where ';
-			for(w=0;w<batchOperationData.where.length;w++){
-				var wdata = batchOperationData.where;
-				if(w>0){
-					where = where+' and ';
-				}
-				where = where+ ' '+ wdata[w].col +'= '+wdata[w].val+' ';
-			}
+			var val = batchOperationData.value;
 
 			
-		
+			var where = ' where ';
+			for (w = 0; w < batchOperationData.where.length; w++) {
+				var wdata = batchOperationData.where;
+				if (w > 0) {
+					where = where + ' and ';
+				}
+				where = where + ' ' + wdata[w].col + '= ' + wdata[w].val + ' ';
+			}
+
+			//UPDATE clinets SET points = (CASE WHEN name='abc' and salary='25000' THEN ' 100' WHEN name = 'xyz' THEN ' 2' WHEN name= 'joy' THEN ' 3' ELSE 'field_namer' END)
+			var query = 'update ' + output_table_info.dbTable + '  set ' + updateCol + '=' + val + where
+			console.log(query, 'query')
+			db.connection.query(query, function (error, results, fields) {
+				if (error) {
+					console.log(error)
+					reject(0)
+				} else {
+					resolve(results)
+				}
+			});
 
 
-  
-		//UPDATE clinets SET points = (CASE WHEN name='abc' and salary='25000' THEN ' 100' WHEN name = 'xyz' THEN ' 2' WHEN name= 'joy' THEN ' 3' ELSE 'field_namer' END)
-
-		//var query = 'update ' + output_table_info.dbTable + ' set ' + updateCol + '=' + val + where
-		var query = 'update ' + output_table_info.dbTable + '  set ' + updateCol + '=' + val + where
-		console.log(query,'query')
-		db.connection.query(query, function (error, results, fields) {
-		  if (error) {
-			console.log(error)
+		} else {
+			console.log('errrrrr hereeee')
 			reject(0)
-		  } else {
-			resolve(results)
-		  }
-		});
-  
-  
-	  } else {
-  console.log('errrrrr hereeee')
-		reject(0)
-	  }
+		}
 	});
 }
 
-exports.checkIfUniqueCallExist = async function(functions){
+exports.checkIfUniqueCallExist = async function (functions) {
 
 }
 function trailing_zeros(number) {
-    number = number.toFixed(2);
-    console.log(number);
-    return number;
+	number = number.toFixed(2);
+	console.log(number);
+	return number;
 }

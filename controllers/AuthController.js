@@ -15,6 +15,9 @@ const bcrypt = require('bcrypt');
 var jwt = require('jsonwebtoken');
 
 const saltRounds = 10;
+
+
+//get all the plans list and their details
 exports.plans = async function (req, res) {
     var plans = await Plan.where({}).fetchAll();
     res.status(200).send({
@@ -24,6 +27,8 @@ exports.plans = async function (req, res) {
     });
 }
 
+
+//login to pol bu username and password
 exports.login = async function (req, res) {
     var data = req.body
     var exist = await User.where({ 'username': data.username }).count();
@@ -58,6 +63,8 @@ exports.login = async function (req, res) {
 
 }
 
+
+//Susbcribe to one plan to user
 exports.subscribe = async function (req, res) {
 
     var data = req.body
@@ -160,6 +167,8 @@ exports.subscribe = async function (req, res) {
 
 }
 
+
+//registe ruser in pol 
 exports.register = async function (req, res) {
 
     var data = req.body
@@ -217,6 +226,8 @@ exports.register = async function (req, res) {
 
     });
 }
+
+//get the user detail of logge din user
 exports.userDetail = async function (req, res) {
 
     var data = req.body
@@ -229,6 +240,8 @@ exports.userDetail = async function (req, res) {
         data: user
     });
 }
+
+//save the new file  according to user id in database
 exports.saveFile = async function (req, res) {
 
     var data = req.body
@@ -270,10 +283,11 @@ exports.saveFile = async function (req, res) {
 }
 
 
+//Update already exusting file
 exports.updateFile = async function(req,res){
 
   
-  var data = req.body
+    var data = req.body
 
         await UserFile.where({ 'id': data.id }).save({
             'file': data.file,
@@ -287,7 +301,7 @@ exports.updateFile = async function(req,res){
         return
     }
 
-
+//to get  all the fiels created by user
 exports.getuserFiles = async function(req,res){
 
   
@@ -303,7 +317,7 @@ exports.getuserFiles = async function(req,res){
     }
     
    
-
+//To save folder according to parnet folder of a user
 exports.saveFolder = async function(req,res){
 
     var data = req.body
@@ -323,6 +337,7 @@ exports.saveFolder = async function(req,res){
         return
     }
 
+// to get the list of main root folders (folders that have not parent folder)
 exports.mainFolders = async function(req,res){
 
   
@@ -337,6 +352,7 @@ exports.mainFolders = async function(req,res){
         return
 }
 
+//get the folders routes (path of folder)
 async function getFolderRoute(folder_id){
 	
     var is_folder = await Folder.where({  'id': folder_id }).count();
@@ -372,6 +388,8 @@ async function getFolderRoute(folder_id){
     return arr;
 }
 
+
+//Get the dub folders list by parent folder id
 exports.subFolders = async function(req,res){
 
  
@@ -409,17 +427,19 @@ exports.subFolders = async function(req,res){
         return
 }
 
+
+//get the back folders list from folder id
 exports.backSubFolders = async function(req,res){
   var folder = await Folder.where({  'id':req.params.id}).fetch();
   folder = folder.toJSON()
   	 var folders = await Folder.where({  'user_id': req.user.ID ,'parent_folder_id':folder.parent_folder_id}).fetchAll();
 	list = folders.toJSON()
-if(list.length>0)
-{
-	parent_folder_id=list[0].parent_folder_id
-}else{
-	parent_folder_id = 0;
-}
+    if(list.length>0)
+    {
+        parent_folder_id=list[0].parent_folder_id
+    }else{
+        parent_folder_id = 0;
+    }
 	var files = await UserFile.where({  'user_id': req.user.ID ,'folder_id':folder.parent_folder_id }).fetchAll();
   	files = files.toJSON()
 
@@ -449,6 +469,8 @@ var route = await getFolderRoute(folder.parent_folder_id);
         return
 }
 
+
+//Get the temporary file of a logge din user
 exports.getTemp = async function(req,res){
 
   	var exist = await Temp.where({  'user_id': req.user.ID }).count();
@@ -466,6 +488,8 @@ exports.getTemp = async function(req,res){
         return
 }
 
+
+//Save temporary file to logged in user to database
 exports.saveTemp = async function(req,res){
 
 	var exist = await Temp.where({  'user_id': req.user.ID }).count();
@@ -494,6 +518,8 @@ exports.saveTemp = async function(req,res){
         return
     }
 
+
+//Open last open files of logged in user
 exports.lastOpenFiles = async function(req,res){
 
 	  var files = await UserFile.where({  'user_id': req.user.ID }).orderBy('updated_at','desc').fetchAll();
@@ -516,7 +542,8 @@ exports.lastOpenFiles = async function(req,res){
         return
 
 }
-    
+
+//Save default connection to logged in user
 exports.savedefaultConnection = async function(req,res) {
 	var exist = await DefaultConnection.where({  'user_id': req.user.ID }).count();
 
@@ -545,6 +572,8 @@ exports.savedefaultConnection = async function(req,res) {
         });
         return
 }
+
+//Get the user data bu user id
 async function getUserData(id){
   
     var user = await User.where({ 'ID':id }).fetch({ withRelated: ['payment_detail','plan_detail','default_connection'] });

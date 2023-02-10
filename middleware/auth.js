@@ -5,7 +5,7 @@ var knex = require('knex');
 var knexfile = require('../knexfile');
 var jwt = require('jsonwebtoken');
 
-
+//this function chekc the jwt token and ecode and check its correct or not
 
 exports.auth = function(req, res,next) {
     var url = req.protocol + '://' + req.get('host') + req.originalUrl; 

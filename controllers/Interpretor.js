@@ -5,6 +5,8 @@ var router = express.Router();
 var DBHelper = require('../helpers/db');
 var async = require('async');
 
+
+//execute pol accepts functions and calcualte the functions and return the result back for output table
 exports.execuatePoll = async function (req, res) {
 
   var functions = req.body.functions;
@@ -175,6 +177,8 @@ exports.execuatePoll = async function (req, res) {
     });
   }
 }
+
+//commit pol accepts functions and calcualte the functions and save the results into  table
 exports.commitPoll = async function (req, res) {
 
   var functions = req.body.functions;
@@ -183,7 +187,6 @@ exports.commitPoll = async function (req, res) {
   var resultSetData = [];
   var final_res = [];
 
-  //var result = this.checkIfUniqueCallExist(functions);
 
   try {
     for (var f = 0; f < functions.length; f++) {
@@ -400,11 +403,13 @@ exports.commitPoll = async function (req, res) {
   }
 }
 
+
+//Batch operations to update data
 function batch(parallelLimit, data) {
 
   return function (cb) {
     var toDo = [];
-    console.log('in batchhhh')
+   
     //pushing each process onto the toDo list
     for (var i = 0; i < data.length; i++) {
       toDo.push(process(data[i]));
@@ -424,14 +429,14 @@ function batch(parallelLimit, data) {
   }
 }
 
+
+//process the batched data
 function process(data) {
 
   var db = data.db_connection;
   var updateCol = data.output_field;
   var val = data.value;
-  console.log('ghghghg')
-
-
+ 
   return function (cb) {
 
     if (db && db.status == 1) {
