@@ -2,10 +2,10 @@ var express = require('express');
 var router = express.Router();
 //var Database = require('../models/Database');
 var DBHelper = require('../helpers/db');
-/* GET home page. */
 
 
-//Add database and create connection to check id DB is connectting or not
+
+/**Add database and create connection to check id DB is connectting or not*/
 exports.addDatabase = async function (req, res) {
 
   var data = req.body
@@ -26,7 +26,7 @@ exports.addDatabase = async function (req, res) {
 };
 
 
-//get the table slist from database details
+/**Get the table slist from database details*/
 exports.getTables = async function (req, res) {
 
   var data = req.body
@@ -61,7 +61,7 @@ exports.getTables = async function (req, res) {
 };
 
 
-//get the table slist from database details
+/**get the table slist from database details*/
 exports.listTables = async function (req, res) {
   let { db_id } = req.params;
   let db = await Database.where({ 'id': db_id }).fetch();
@@ -86,7 +86,7 @@ exports.listTables = async function (req, res) {
   connection.end();
 }
 
-//get the meta data of table
+/**get the meta data of table*/
 exports.getMetaData = async function (req, res) {
   let { table } = req.params;
   try {
@@ -104,7 +104,7 @@ exports.getMetaData = async function (req, res) {
   }
 }
 
-//get the data from a table 
+/**get the data from a table */
 exports.getTableData = async function (req, res) {
   let { table } = req.params;
   var db = req.body;
@@ -147,7 +147,7 @@ exports.getTableData = async function (req, res) {
 
 };
 
-//get the sql result of a table
+/**get the sql result of a table*/
 exports.getSqlData = async function (req, res) {
 
   var db = req.body.dbDetails;
@@ -182,7 +182,7 @@ exports.getSqlData = async function (req, res) {
 };
 
 
-//Get the value of cell by  row and col
+/**Get the value of cell by  row and col*/
 exports.getColRowValue = async function (req, res) {
   var db = req.body.dbDetails;
   let { table, col, row } = req.params;
@@ -249,7 +249,6 @@ exports.getColRowValue = async function (req, res) {
 
 
 async function getTableResultSet(data) {
-  //var data = req.body
   return new Promise(async (resolve, reject) => {
 
     var db = await DBHelper.createConnection(data.dbDetails);
@@ -277,7 +276,7 @@ async function getTableResultSet(data) {
 }
 
 
-//rollback function get the output table and get the results from db and send them back
+/**rollback function get the output table and get the results from db and send them back*/
 exports.rollbackPoll = async function (req, res) {
   var data = req.body;
   var output = [];
@@ -298,7 +297,7 @@ exports.rollbackPoll = async function (req, res) {
 }
 
 
-//Add pol column in the table
+/**Add pol column in the table*/
 exports.addPolColumn = async function (req, res) {
   let { table } = req.params;
   try {
@@ -317,82 +316,3 @@ exports.addPolColumn = async function (req, res) {
 }
 
 
-// async function addbits(s) {
-
-//   var total = 0,
-//     s = s.match(/[+\-]*(\.\d+|\d+(\.\d+)?)/g) || [];
-
-//   while (s.length) {
-//     total += parseFloat(s.shift());
-//   }
-//   return total;
-// }
-
-// async function getValueFromResultSet(resultSet, row, col) {
-
-//   return new Promise((resolve, reject) => {
-//     row = parseInt(row)
-//     col = parseInt(col)
-
-//     if (resultSet.length >= row) {
-//       var c = 0;
-//       for (const v in resultSet[row]) {
-//         if (c == col) {
-//           resolve(resultSet[row][v] == null ? 0 : resultSet[row][v]);
-//         }
-//         c++;
-//       }
-//       if (c == 0) {
-//         resolve(0)
-//       }
-//       console.log(resultSet.length, c, 'lennnnnnnnnnnn')
-
-//     } else {
-//       reject(0)
-//     }
-
-//   });
-
-// }
-
-// async function makeFunctionbuffer(fn, tableInfo) {
-
-//   console.log('fn', fn)
-//   return new Promise((resolve, reject) => {
-
-//     var fn_buffer = [];
-//     var skeleton = '';
-
-//     var right_side = fn.split('=')[1];
-//     var left_side = fn.split('=')[0];
-//     var output_column = left_side.split('(')[1][0];
-
-//     var pointers = right_side.split(']');
-
-//     for (var p = 0; p < pointers.length; p++) {
-//       if (pointers[p] != '') {
-//         var vTable = pointers[p].split(':')[0];
-
-//         if (p > 0) {
-//           vTable = pointers[p].split(':')[0].slice(1);
-//           skeleton = skeleton + '~' + pointers[p].split(':')[0].charAt(0);
-//         }
-
-//         var p_col = pointers[p].split(':[')[1].split(',')[0];
-//         var p_row = pointers[p].split(',')[1];
-//         console.log(pointers[p], 'sssss', p_col, p_row)
-//         var cp = parseInt(output_column) + parseInt(p_col)
-//         var rr = p_row
-//         fn_buffer.push({
-//           vTable: tableInfo,
-//           cp: cp,
-//           rr: rr,
-//           output_column: output_column
-//         });
-//       }
-//     }
-
-//     resolve({ fn_buffer: fn_buffer, skeleton: skeleton + '~' })
-
-//   });
-// }

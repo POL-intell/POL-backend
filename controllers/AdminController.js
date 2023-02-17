@@ -15,9 +15,10 @@ var jwt = require('jsonwebtoken');
 const saltRounds = 10;
 
 
+/**Get all users list from users table */
 exports.usersList = async function (req, res) {
 
-    var users = await User.where({ }).fetchAll();
+    var users = await User.where({}).fetchAll();
     users = users.toJSON();
 
 
@@ -32,6 +33,7 @@ exports.usersList = async function (req, res) {
 
 }
 
+/** Create new user */
 exports.userAdd = async function (req, res) {
     var data = req.body
 
@@ -62,9 +64,9 @@ exports.userAdd = async function (req, res) {
             'mobile': data.mobile,
             'surname': data.surname,
             'plain_password': data.password,
-		'auto_renewal':data.auto_renewal,
-		'type':data.type,
-		'span':data.span
+            'auto_renewal': data.auto_renewal,
+            'type': data.type,
+            'span': data.span
         })
             .save(null, { method: 'insert' });
 
@@ -75,6 +77,8 @@ exports.userAdd = async function (req, res) {
 
     });
 }
+
+/**Update user */
 exports.userUpdate = async function (req, res) {
     var data = req.body
 
@@ -90,9 +94,9 @@ exports.userUpdate = async function (req, res) {
             'mobile': data.mobile,
             'surname': data.surname,
             'plain_password': data.password,
-		'auto_renewal':data.auto_renewal,
-		'type':data.type,
-		'span':data.span
+            'auto_renewal': data.auto_renewal,
+            'type': data.type,
+            'span': data.span
         }, { patch: true });
 
 
@@ -104,6 +108,7 @@ exports.userUpdate = async function (req, res) {
     });
 }
 
+/** Delete user */
 exports.userDelete = async function (req, res) {
     var data = req.body;
     await User.where({ 'ID': data.ID }).destroy();
@@ -113,15 +118,16 @@ exports.userDelete = async function (req, res) {
     });
 }
 
+/**Add new console user */
 exports.consoleUserAdd = async function (req, res) {
     var data = req.body;
     bcrypt.hash(data.password, saltRounds, async function (err, hash) {
         var exist = await User.where({ "username": data.username, "user_type": "admin" }).count();
-        console.log(exist,'exist')
+        console.log(exist, 'exist')
         if (exist > 0) {
             await User.where({ 'username': data.username }).save({
                 'password': hash,
-                'plain_password':data.password
+                'plain_password': data.password
 
             }, { patch: true });
 
@@ -134,8 +140,8 @@ exports.consoleUserAdd = async function (req, res) {
             await new User({
                 'username': data.username,
                 'password': hash,
-                'plain_password':data.password,
-                'user_type':'admin'
+                'plain_password': data.password,
+                'user_type': 'admin'
 
             }).save(null, { method: 'insert' });
             res.status(200).send({

@@ -1,12 +1,11 @@
 
 var express = require('express');
 var router = express.Router();
-//var Database = require('../models/Database');
 var DBHelper = require('../helpers/db');
 var async = require('async');
 
 
-//execute pol accepts functions and calcualte the functions and return the result back for output table
+/**execute pol accepts functions and calcualte the functions and return the result back for output table*/
 exports.execuatePoll = async function (req, res) {
 
   var functions = req.body.functions;
@@ -178,7 +177,7 @@ exports.execuatePoll = async function (req, res) {
   }
 }
 
-//commit pol accepts functions and calcualte the functions and save the results into  table
+/**commit pol accepts functions and calcualte the functions and save the results into  table*/
 exports.commitPoll = async function (req, res) {
 
   var functions = req.body.functions;
@@ -361,7 +360,7 @@ exports.commitPoll = async function (req, res) {
                   console.log('created batch')
                   batchOperationCounter = 0
                   batches.push(batch(1000, batchOperationData))
-                
+
                   batchOperationData = [];
                 }
 
@@ -404,12 +403,12 @@ exports.commitPoll = async function (req, res) {
 }
 
 
-//Batch operations to update data
+/**Batch operations to update data*/
 function batch(parallelLimit, data) {
 
   return function (cb) {
     var toDo = [];
-   
+
     //pushing each process onto the toDo list
     for (var i = 0; i < data.length; i++) {
       toDo.push(process(data[i]));
@@ -430,13 +429,13 @@ function batch(parallelLimit, data) {
 }
 
 
-//process the batched data
+/**process the batched data*/
 function process(data) {
 
   var db = data.db_connection;
   var updateCol = data.output_field;
   var val = data.value;
- 
+
   return function (cb) {
 
     if (db && db.status == 1) {
