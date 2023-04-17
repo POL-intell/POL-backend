@@ -1,4 +1,6 @@
 var mysql = require('mysql2');
+const stream = require('stream');
+const { createPool } = require('mysql2');
 
 //create connection to database by host,user,password and database. For this mysql2 package is used tomake connection to mysql 
 exports.createConnection = async function (config) {
@@ -146,24 +148,53 @@ exports.getTableResultSet = async function (data, no_of_rows = null) {
 			if (no_of_rows) {
 				limit = " LIMIT " + no_of_rows
 			}
-			var from = 0;
+			// if(no_of_rows==20){
+			// 	limit=""
+			// }
+			 var from = 0;
 			var sql = "SELECT * from " + data.dbTable + limit;
 			if (data.start_index) {
 
 				sql = "SELECT * from `" + data.dbTable + "` LIMIT " + data.start_index + " , " + no_of_rows + " "
 			}
-			console.log("SELECT * from " + data.dbTable + limit)
+			// console.log("SELECT * from " + data.dbTable + limit)
 
-			db.connection.query(sql, function (error, results, fields) {
+			// db.connection.query(sql, function (error, results, fields) {
 
-				//console.log('fields', fields[0].name)
-				if (error) {
-					console.log('err', error)
-					reject(0)
-				} else {
-					resolve({ results: results, fields: fields })
-				}
-			});
+			// 	console.log('fields', fields)
+			// 	if (error) {
+			// 		console.log('err', error)
+			// 		reject(0)
+			// 	} else {
+			// 		resolve({ results: results, fields: fields })
+			// 	}
+			// });
+
+			var datas =[];
+  console.log(sql,'sql')
+  db.connection.query("SELECT * from " + data.dbTable)
+      .on('error', function (err) {
+        // Do something about error in the query
+		reject(0)
+      })
+      .stream()
+      .pipe(new stream.Transform({
+        objectMode: true,
+        transform: function (row, encoding, callback) {
+          // Do something with the row of data
+
+        //  console.log(row, 'row',encoding)
+          //res.write(row);
+          datas.push(row);
+          callback();
+        }
+      }))
+      .on('finish', function () {
+        db.connection.end();
+		resolve({ results: datas, fields: data.fields })
+      });
+
+
 
 
 		} else {

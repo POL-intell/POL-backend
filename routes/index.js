@@ -56,6 +56,8 @@ router.get('/get_temp', auth_middleware.auth,AuthController.getTemp);
 
 //default connection
 router.post('/save_default_connection', auth_middleware.auth,AuthController.savedefaultConnection);
+router.post('/update_default_connection', auth_middleware.auth,AuthController.update_default_connection);
+router.post('/delete_default_connection', auth_middleware.auth,AuthController.delete_default_connection);
 
 //open last 10 files
 router.get('/last_open_files', auth_middleware.auth,AuthController.lastOpenFiles);

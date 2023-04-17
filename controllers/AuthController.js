@@ -569,6 +569,54 @@ exports.savedefaultConnection = async function (req, res) {
     });
     return
 }
+exports.update_default_connection = async function (req, res) {
+
+    var data = req.body
+    console.log(data)
+
+    var exist = await DefaultConnection.where({ 'id': data.connection.db_id }).count();
+
+   
+
+    if (exist > 0) {
+        await DefaultConnection.where({ 'id': data.connection.db_id }).save({
+            'connection': JSON.stringify(data.connection),
+
+        }, { patch: true });
+    }
+
+  
+    var cons = await DefaultConnection.where({ 'user_id': req.user.ID }).fetchAll();
+    res.status(200).send({
+        message: "Default Connection has been updated",
+        status: 1,
+        connections: cons.toJSON()
+    });
+    return
+}
+
+exports.delete_default_connection = async function (req, res) {
+
+    var data = req.body
+    console.log(data)
+
+    var exist = await DefaultConnection.where({ 'id': data.connection.db_id }).count();
+
+   
+
+    if (exist > 0) {
+        await DefaultConnection.where({ 'id': data.connection.db_id }).destroy();
+    }
+
+  
+    var cons = await DefaultConnection.where({ 'user_id': req.user.ID }).fetchAll();
+    res.status(200).send({
+        message: "Default Connection has been deleted",
+        status: 1,
+        connections: cons.toJSON()
+    });
+    return
+}
 
 /**Get the user data bu user id*/
 async function getUserData(id) {

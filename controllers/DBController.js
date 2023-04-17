@@ -2,6 +2,8 @@ var express = require('express');
 var router = express.Router();
 //var Database = require('../models/Database');
 var DBHelper = require('../helpers/db');
+const stream = require('stream');
+const { createPool } = require('mysql2');
 
 
 
@@ -122,31 +124,68 @@ exports.getTableData = async function (req, res) {
 
 
   var DB = DBHelper.createConnection(db);
+  // DB.then((result) => {
+  //   var connection = result.connection;
+  //   connection.query("SELECT * from `" + table + "` LIMIT " + from + " , " + to + " ", function (error, results, fields) {
+  //     if (error) {
+  //       res.status(500).send({
+  //         message: error,
+  //         status: 0
+  //       });
+  //     } else {
+  //       res.status(200).send({
+  //         status: 1,
+  //         data: results
+  //       });
+  //     }
+  //   });
+  //   connection.end();
+  // }).catch((error) => {
+  //   res.status(500).send({
+  //     message: error,
+  //     status: 0
+  //   });
+  // })
   DB.then((result) => {
     var connection = result.connection;
-    connection.query("SELECT * from `" + table + "` LIMIT " + from + " , " + to + " ", function (error, results, fields) {
-      if (error) {
-        res.status(500).send({
-          message: error,
-          status: 0
-        });
-      } else {
-        res.status(200).send({
-          status: 1,
-          data: results
-        });
-      }
-    });
-    connection.end();
+    var data = [];
+    console.log("SELECT * from `" + table + "` LIMIT " + from + " , " + to + " ")
+    connection.query("SELECT * from "+ table  )
+      .on('error', function (err) {
+        // Do something about error in the query
+      })
+      .stream()
+      .pipe(new stream.Transform({
+        objectMode: true,
+        transform: function (row, encoding, callback) {
+          console.log(row, 'row')
+          if (data.length == 0) {
+            // res.write('{"status":1,"data":['+JSON.stringify(row));
+          } else {
+            // res.write(","+JSON.stringify(row));
+
+          }
+          data.push(row);
+          callback();
+
+        }
+      }))
+      .on('finish', function () {
+        //res.write("]}");
+
+        connection.end();
+        // res.end()
+        res.send({ status: 1, data: data });
+      });
+
   }).catch((error) => {
+    console.log(error, 'error')
     res.status(500).send({
       message: error,
       status: 0
     });
   })
-
-};
-
+}
 /**get the sql result of a table*/
 exports.getSqlData = async function (req, res) {
 
