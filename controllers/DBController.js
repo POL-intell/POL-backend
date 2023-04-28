@@ -12,7 +12,7 @@ exports.addDatabase = async function (req, res) {
 
   var data = req.body
   var connection = await DBHelper.createConnection(data);
-
+console.log(connection,'connection')
   if (connection && connection.status == 1) {
     res.status(200).send({
       message: "Connection has been set successfully",

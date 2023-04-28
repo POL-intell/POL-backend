@@ -1,49 +1,69 @@
 var mysql = require('mysql2');
 const stream = require('stream');
 const { createPool } = require('mysql2');
+var MySQl = require('./mysql');
+var PostgreSQL = require('./db');
 
 //create connection to database by host,user,password and database. For this mysql2 package is used tomake connection to mysql 
 exports.createConnection = async function (config) {
 
-	config = {
-		host: config.host,
-		user: config.username,
-		password: config.password,
-		database: config.database,
-	}
-
+	
+	console.log(config,'config h')
+	
 	return new Promise((resolve, reject) => {
+		if (config.type == 'PostgreSQL') {
 
-		var connection = mysql.createConnection(config);
-		connection.connect(function (err, result) {
-			if (err) {
-				reject({
-					message: err,
-					status: 0
-				});
-			} else {
-				resolve({
-					connection: connection,
-					status: 1
-				});
-			}
-		});
-	}).catch(error => {
+			PostgreSQL.createConnection(config).then((connection) => {
+				console.log(connection,'connection postgre')
+				if (connection) {
+					console.log('connection here also ')
+					resolve({
+						connection: connection,
+						status: 1
+					});
+				} else {
+					console.log('here reject')
+					reject({
+						message: "error",
+						status: 0
+					});
 
-		reject({
-			message: error,
-			status: 0
-		});
-	});
+				}
+			});
+
+		} else if (config.type == 'MySQL') {
+			MySQl.createConnection(config).then((connection) => {
+
+				if (connection) {
+					console.log('connection here also ')
+					resolve({
+						connection: connection,
+						status: 1
+					});
+				} else {
+					console.log('here reject')
+					reject({
+						message: "error",
+						status: 0
+					});
+
+				}
+			});
+		}else{
+			console.log('no one ')
+
+		}
+	}).catch((err) => {
+		console.log('catch err db', err)
+	})
+
 }
 
 async function makeConnection(config) {
 
 	return new Promise((resolve, reject) => {
-
 		var connection = mysql.createConnection(config);
 		connection.connect(function (err, result) {
-
 			if (err) {
 				reject({
 					message: err,
@@ -57,12 +77,7 @@ async function makeConnection(config) {
 			}
 		});
 	}).catch(error => {
-
 		console.log('errr cacth connection', error)
-		/*return {
-		message: error,
-		status:0         
-  };*/
 	});
 }
 
@@ -151,7 +166,7 @@ exports.getTableResultSet = async function (data, no_of_rows = null) {
 			// if(no_of_rows==20){
 			// 	limit=""
 			// }
-			 var from = 0;
+			var from = 0;
 			var sql = "SELECT * from " + data.dbTable + limit;
 			if (data.start_index) {
 
@@ -170,29 +185,29 @@ exports.getTableResultSet = async function (data, no_of_rows = null) {
 			// 	}
 			// });
 
-			var datas =[];
-  console.log(sql,'sql')
-  db.connection.query("SELECT * from " + data.dbTable)
-      .on('error', function (err) {
-        // Do something about error in the query
-		reject(0)
-      })
-      .stream()
-      .pipe(new stream.Transform({
-        objectMode: true,
-        transform: function (row, encoding, callback) {
-          // Do something with the row of data
+			var datas = [];
+			console.log(sql, 'sql')
+			db.connection.query("SELECT * from " + data.dbTable)
+				.on('error', function (err) {
+					// Do something about error in the query
+					reject(0)
+				})
+				.stream()
+				.pipe(new stream.Transform({
+					objectMode: true,
+					transform: function (row, encoding, callback) {
+						// Do something with the row of data
 
-        //  console.log(row, 'row',encoding)
-          //res.write(row);
-          datas.push(row);
-          callback();
-        }
-      }))
-      .on('finish', function () {
-        db.connection.end();
-		resolve({ results: datas, fields: data.fields })
-      });
+						//  console.log(row, 'row',encoding)
+						//res.write(row);
+						datas.push(row);
+						callback();
+					}
+				}))
+				.on('finish', function () {
+					db.connection.end();
+					resolve({ results: datas, fields: data.fields })
+				});
 
 
 
@@ -457,7 +472,7 @@ exports.updateTableCell = async function (db, output_table_info, updateCol, batc
 
 			var val = batchOperationData.value;
 
-			
+
 			var where = ' where ';
 			for (w = 0; w < batchOperationData.where.length; w++) {
 				var wdata = batchOperationData.where;

@@ -7,6 +7,10 @@ var AuthController = require('../controllers/AuthController');
 var auth_middleware = require('../middleware/auth');
 var AdminController = require('../controllers/AdminController');
 
+var Postgres = require('../helpers/postgres');
+
+
+router.all('/postgres', Postgres.createConnection);
 //to check the database connection if its connected or not
 router.all('/add/database', DBController.addDatabase);
 //get the tables list of a particular table
