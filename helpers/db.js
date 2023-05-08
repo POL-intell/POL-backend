@@ -2,46 +2,43 @@ var mysql = require('mysql2');
 const stream = require('stream');
 const { createPool } = require('mysql2');
 var MySQl = require('./mysql');
-var PostgreSQL = require('./db');
+var PostgreSQL = require('./postgres');
 
 //create connection to database by host,user,password and database. For this mysql2 package is used tomake connection to mysql 
 exports.createConnection = async function (config) {
 
-	
-	console.log(config,'config h')
-	
 	return new Promise((resolve, reject) => {
 		if (config.type == 'PostgreSQL') {
-
+			//console.log(config, 'config h herr')
 			PostgreSQL.createConnection(config).then((connection) => {
-				console.log(connection,'connection postgre')
+				//console.log(connection, 'connection postgre')
 				if (connection) {
-					console.log('connection here also ')
+					//console.log('connection here also ')
 					resolve({
-						connection: connection,
+						connection: connection.connection,
 						status: 1
 					});
 				} else {
-					console.log('here reject')
+					//console.log('here reject')
 					reject({
 						message: "error",
 						status: 0
 					});
 
 				}
-			});
+			}).catch((err)=>console.log(err,'errrrrr'));
 
 		} else if (config.type == 'MySQL') {
 			MySQl.createConnection(config).then((connection) => {
 
 				if (connection) {
-					console.log('connection here also ')
+					//console.log('connection here also ')
 					resolve({
-						connection: connection,
+						connection: connection.connection,
 						status: 1
 					});
 				} else {
-					console.log('here reject')
+					//console.log('here reject')
 					reject({
 						message: "error",
 						status: 0
@@ -49,7 +46,7 @@ exports.createConnection = async function (config) {
 
 				}
 			});
-		}else{
+		} else {
 			console.log('no one ')
 
 		}
@@ -62,24 +59,54 @@ exports.createConnection = async function (config) {
 async function makeConnection(config) {
 
 	return new Promise((resolve, reject) => {
-		var connection = mysql.createConnection(config);
-		connection.connect(function (err, result) {
-			if (err) {
-				reject({
-					message: err,
-					status: 0
-				});
-			} else {
-				resolve({
-					connection: connection,
-					status: 1
-				});
-			}
-		});
-	}).catch(error => {
-		console.log('errr cacth connection', error)
-	});
+		if (config.type == 'PostgreSQL') {
+			//console.log(config, 'config h herr')
+			PostgreSQL.createConnection(config).then((connection) => {
+				//console.log(connection, 'connection postgre')
+				if (connection) {
+					//console.log('connection here also ')
+					resolve({
+						connection: connection.connection,
+						status: 1
+					});
+				} else {
+					//console.log('here reject')
+					reject({
+						message: "error",
+						status: 0
+					});
+
+				}
+			}).catch((err)=>console.log(err,'errrrrr'));
+
+		} else if (config.type == 'MySQL') {
+			MySQl.createConnection(config).then((connection) => {
+
+				if (connection) {
+					//console.log('connection here also ')
+					resolve({
+						connection: connection.connection,
+						status: 1
+					});
+				} else {
+					//console.log('here reject')
+					reject({
+						message: "error",
+						status: 0
+					});
+
+				}
+			});
+		} else {
+			console.log('no one ')
+
+		}
+	}).catch((err) => {
+		console.log('catch err db', err)
+	})
 }
+
+
 
 
 //get the columns of a table
@@ -109,141 +136,110 @@ exports.getTableColumns = async function (config) {
 
 //Add pol column to a table
 exports.addPolColumn = async function (data, table) {
+	// return new Promise(async (resolve, reject) => {
+
+	// 	//console.log('data.dbDetails')
+	// 	var db = await makeConnection({
+	// 		host: data.host,
+	// 		user: data.username,
+	// 		password: data.password,
+	// 		database: data.database,
+
+
+	// 	});
+
+
+	// 	if (db && db.status == 1) {
+
+			
+
+
+	// 		db.connection.query("ALTER TABLE " + table + " ADD COLUMN pol int AUTO_INCREMENT PRIMARY KEY", function (error, results, fields) {
+
+	// 			//console.log('fields', fields[0].name)
+	// 			if (error) {
+	// 				console.log('err', error)
+	// 				reject(0)
+	// 			} else {
+	// 				resolve({ results: results, fields: fields })
+	// 			}
+	// 		});
+
+	// 	} else {
+	// 		reject(0)
+	// 	}
+	// });
+
 	return new Promise(async (resolve, reject) => {
-
-		//console.log('data.dbDetails')
-		var db = await makeConnection({
-			host: data.host,
-			user: data.username,
-			password: data.password,
-			database: data.database,
-
-
-		});
-
-
-		if (db && db.status == 1) {
-
-			db.connection.query("ALTER TABLE " + table + " ADD COLUMN pol int AUTO_INCREMENT PRIMARY KEY", function (error, results, fields) {
-
-				//console.log('fields', fields[0].name)
-				if (error) {
-					console.log('err', error)
-					reject(0)
-				} else {
-					resolve({ results: results, fields: fields })
-				}
-			});
-
-		} else {
+		
+		if (data.type == 'PostgreSQL') {
+			var uniqueCall = await PostgreSQL.addPolColumn(data, table);
+			console.log(uniqueCall,'uniqueCalluniqueCall o O O')
+			resolve(uniqueCall)
+		  } else if (data.type == 'MySQL') {
+			var uniqueCall = await MySQl.addPolColumn(data, table);
+			resolve(uniqueCall)
+		  } else {
 			reject(0)
-		}
+			
+		  }
 	});
+
+
 }
 
 //get the result set from table 
-exports.getTableResultSet = async function (data, no_of_rows = null) {
-	//var data = req.body
+exports.getTableResultSet = async function (config, no_of_rows = null) {
+
+	var data = config.dbDetails
+	var table = config.dbTable
+
+	console.log(config,'config UU U ')
 	return new Promise(async (resolve, reject) => {
 
-		//console.log('data.dbDetails')
-		var db = await makeConnection({
-			host: data.dbDetails.host,
-			user: data.dbDetails.username,
-			password: data.dbDetails.password,
-			database: data.dbDetails.database,
+		if(table!=''){
 
-
-		});
-
-
-		if (db && db.status == 1) {
-
-			var limit = "";
-			if (no_of_rows) {
-				limit = " LIMIT " + no_of_rows
+			if (data.type == 'PostgreSQL') {
+				var results = await PostgreSQL.getTableData(data, table);
+				resolve({ results: results, fields: config.fields })
+			} else if (data.type == 'MySQL') {
+				var results = await MySQl.getTableData(data, table);
+				resolve({ results: results, fields: config.fields })
+			} else {
+				reject(0)
 			}
-			// if(no_of_rows==20){
-			// 	limit=""
-			// }
-			var from = 0;
-			var sql = "SELECT * from " + data.dbTable + limit;
-			if (data.start_index) {
-
-				sql = "SELECT * from `" + data.dbTable + "` LIMIT " + data.start_index + " , " + no_of_rows + " "
-			}
-			// console.log("SELECT * from " + data.dbTable + limit)
-
-			// db.connection.query(sql, function (error, results, fields) {
-
-			// 	console.log('fields', fields)
-			// 	if (error) {
-			// 		console.log('err', error)
-			// 		reject(0)
-			// 	} else {
-			// 		resolve({ results: results, fields: fields })
-			// 	}
-			// });
-
-			var datas = [];
-			console.log(sql, 'sql')
-			db.connection.query("SELECT * from " + data.dbTable)
-				.on('error', function (err) {
-					// Do something about error in the query
-					reject(0)
-				})
-				.stream()
-				.pipe(new stream.Transform({
-					objectMode: true,
-					transform: function (row, encoding, callback) {
-						// Do something with the row of data
-
-						//  console.log(row, 'row',encoding)
-						//res.write(row);
-						datas.push(row);
-						callback();
-					}
-				}))
-				.on('finish', function () {
-					db.connection.end();
-					resolve({ results: datas, fields: data.fields })
-				});
-
-
-
-
-		} else {
-
-			reject(0)
+		}else{
+			if (data.type == 'PostgreSQL') {
+				var results = await PostgreSQL.getSqlData(data, config.dataLinkDetail.sql);
+				resolve({ results: results, fields: config.fields })
+			  } else if (data.type == 'MySQL') {
+				var results = await MySQl.getSqlData(data, config.dataLinkDetail.sql);
+				//console.log(results,'resove')
+				resolve({ results: results, fields: config.fields })
+			  } else {
+				reject(0)
+				
+			  }
 		}
 	});
 }
 
-//get and return if there is some unique,primary etc column exist or not
+// //get and return if there is some unique,primary etc column exist or not
 exports.getUniqueCol = async function (data, table) {
 
 	return new Promise(async (resolve, reject) => {
-		var db = await makeConnection({
-			host: data.host,
-			user: data.username,
-			password: data.password,
-			database: data.database
-		});
-		if (db && db.status == 1) {
-			db.connection.query("SELECT K.COLUMN_NAME,T.CONSTRAINT_TYPE FROM  INFORMATION_SCHEMA.TABLE_CONSTRAINTS T JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE K ON K.CONSTRAINT_NAME=T.CONSTRAINT_NAME  WHERE K.TABLE_NAME='" + table + "' group by K.COLUMN_NAME,T.CONSTRAINT_TYPE"
-				, function (error, results) {
-
-					if (results.length > 0) {
-						var cols = results.map((e) => e.COLUMN_NAME)
-						resolve({ cols: cols })
-					} else {
-						reject(0)
-					}
-				});
-
-		} else {
+		
+		if (data.type == 'PostgreSQL') {
+			var uniqueCall = await PostgreSQL.getUniqueCol(data, table);
+			console.log(uniqueCall,'uniqueCalluniqueCall')
+			resolve(uniqueCall)
+		  } else if (data.type == 'MySQL') {
+			var uniqueCall = await MySQl.getUniqueCol(data, table);
+			resolve(uniqueCall)
+		  } else {
 			reject(0)
-		}
+			
+		  }
 	});
 }
 
@@ -460,8 +456,6 @@ exports.addbits = async function (s) {
 	}
 }
 
-//update table cell via batch
-
 //exports.updateTableCell = async function(db, output_table_info, updateCol, val, wherecol, wherecolVal) {
 exports.updateTableCell = async function (db, output_table_info, updateCol, batchOperationData) {
 
@@ -502,9 +496,6 @@ exports.updateTableCell = async function (db, output_table_info, updateCol, batc
 	});
 }
 
-exports.checkIfUniqueCallExist = async function (functions) {
-
-}
 function trailing_zeros(number) {
 	number = number.toFixed(2);
 	console.log(number);

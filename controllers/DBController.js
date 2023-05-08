@@ -5,14 +5,15 @@ var DBHelper = require('../helpers/db');
 const stream = require('stream');
 const { createPool } = require('mysql2');
 
-
+var MySQl = require('../helpers/mysql');
+var PostgreSQL = require('../helpers/postgres');
 
 /**Add database and create connection to check id DB is connectting or not*/
 exports.addDatabase = async function (req, res) {
 
   var data = req.body
   var connection = await DBHelper.createConnection(data);
-console.log(connection,'connection')
+
   if (connection && connection.status == 1) {
     res.status(200).send({
       message: "Connection has been set successfully",
@@ -32,70 +33,81 @@ console.log(connection,'connection')
 exports.getTables = async function (req, res) {
 
   var data = req.body
-  var db = await DBHelper.createConnection(data);
 
+  if (data.type == 'PostgreSQL') {
+    var result = await PostgreSQL.getTablesListOfDatabase(data)
 
-  if (db && db.status == 1) {
-
-    db.connection.query("SELECT table_name, table_rows FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = '" + data.database + "'", function (error, results, fields) {
-      if (error) {
-        res.status(500).send({
-          message: error,
-          status: 0
-        });
-      } else {
-        res.status(200).send({
-          status: 1,
-          data: results
-        });
-      }
+    res.status(200).send({
+      status: 1,
+      data: result.result
     });
+  } else if (data.type == 'MySQL') {
+    var result = await MySQl.getTablesListOfDatabase(data)
 
-
+    res.status(200).send({
+      status: 1,
+      data: result.result
+    });
   } else {
-
     res.status(500).send({
-      message: "Connection has not been set ",
-      detail: connection,
-      status: 1
+      message: "Wrong DB Type",
+      status: 0
     });
   }
+
 };
 
 
 /**get the table slist from database details*/
-exports.listTables = async function (req, res) {
-  let { db_id } = req.params;
-  let db = await Database.where({ 'id': db_id }).fetch();
-  db = db.toJSON();
-  var DB = await DBHelper.createConnection(db);
+// exports.listTables = async function (req, res) {
+//   let { db_id } = req.params;
+//   let db = await Database.where({ 'id': db_id }).fetch();
+//   db = db.toJSON();
+//   var DB = await DBHelper.createConnection(db);
 
 
-  let connection = DB.connection;
-  connection.query("SELECT table_name, table_rows FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = " + db.database, function (error, results, fields) {
-    if (error) {
-      res.status(500).send({
-        message: error,
-        status: 0
-      });
-    } else {
-      res.status(200).send({
-        status: 1,
-        data: results
-      });
-    }
-  });
-  connection.end();
-}
+//   let connection = DB.connection;
+//   connection.query("SELECT table_name, table_rows FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = " + db.database, function (error, results, fields) {
+//     if (error) {
+//       res.status(500).send({
+//         message: error,
+//         status: 0
+//       });
+//     } else {
+//       res.status(200).send({
+//         status: 1,
+//         data: results
+//       });
+//     }
+//   });
+//   connection.end();
+// }
 
 /**get the meta data of table*/
 exports.getMetaData = async function (req, res) {
+
+  var data = req.body;
   let { table } = req.params;
   try {
-    var uniqueCall = await DBHelper.getUniqueCol(req.body, table);
-    res.status(200).send({
-      status: 1,
-    });
+    if (data.type == 'PostgreSQL') {
+      var uniqueCall = await PostgreSQL.getUniqueCol(req.body, table);
+      res.status(200).send({
+        status: 1,
+      });
+    } else if (data.type == 'MySQL') {
+      var uniqueCall = await MySQl.getUniqueCol(req.body, table);
+      res.status(200).send({
+        status: 1,
+      });
+    } else {
+      res.status(200).send({
+        status: 0,
+        data: [],
+        message: "Wrong DB Type"
+      });
+      return;
+    }
+
   } catch (e) {
     res.status(200).send({
       status: 0,
@@ -109,114 +121,131 @@ exports.getMetaData = async function (req, res) {
 /**get the data from a table */
 exports.getTableData = async function (req, res) {
   let { table } = req.params;
-  var db = req.body;
-  var from = 0;
-  if (req.body.from) {
-    from = req.body.from;
-  }
-  var to = 20;
-  if (req.body.to) {
-    to = req.body.to;
-  }
-  if (req.body.dbDetails) {
-    db = req.body.dbDetails;
-  }
+  var data = req.body.dbDetails;
+    try {
+      if (data.type == 'PostgreSQL') {
+        var results = await PostgreSQL.getTableData(data, table);
+        res.status(200).send({
+          status: 1,
+          data: results
+        });
+      } else if (data.type == 'MySQL') {
+        var results = await MySQl.getTableData(data, table);
+        res.status(200).send({
+          status: 1,
+          data: results
+        });
+      } else {
+        res.status(200).send({
+          status: 0,
+          data: [],
+          message: "Wrong DB Type"
+        });
+        return;
+      }
+ 
+
+      } catch (e) {
+        res.status(200).send({
+          status: 0,
+          data: [],
+          message: e
+        });
+        return;
+      }
+
+  // let { table } = req.params;
+  // var db = req.body;
+  // var from = 0;
+  // if (req.body.from) {
+  //   from = req.body.from;
+  // }
+  // var to = 20;
+  // if (req.body.to) {
+  //   to = req.body.to;
+  // }
+  // if (req.body.dbDetails) {
+  //   db = req.body.dbDetails;
+  // }
 
 
-  var DB = DBHelper.createConnection(db);
+  // var DB = DBHelper.makeConnections(db);
   // DB.then((result) => {
   //   var connection = result.connection;
-  //   connection.query("SELECT * from `" + table + "` LIMIT " + from + " , " + to + " ", function (error, results, fields) {
-  //     if (error) {
-  //       res.status(500).send({
-  //         message: error,
-  //         status: 0
-  //       });
-  //     } else {
-  //       res.status(200).send({
-  //         status: 1,
-  //         data: results
-  //       });
-  //     }
-  //   });
-  //   connection.end();
+  //   var data = [];
+  //   console.log("SELECT * from `" + table + "` LIMIT " + from + " , " + to + " ")
+  //   connection.query("SELECT * from " + table)
+  //     .on('error', function (err) {
+  //       // Do something about error in the query
+  //     })
+  //     .stream()
+  //     .pipe(new stream.Transform({
+  //       objectMode: true,
+  //       transform: function (row, encoding, callback) {
+  //         console.log(row, 'row')
+  //         if (data.length == 0) {
+  //           // res.write('{"status":1,"data":['+JSON.stringify(row));
+  //         } else {
+  //           // res.write(","+JSON.stringify(row));
+
+  //         }
+  //         data.push(row);
+  //         callback();
+
+  //       }
+  //     }))
+  //     .on('finish', function () {
+  //       //res.write("]}");
+
+  //       connection.end();
+  //       // res.end()
+  //       res.send({ status: 1, data: data });
+  //     });
+
   // }).catch((error) => {
+  //   console.log(error, 'error')
   //   res.status(500).send({
   //     message: error,
   //     status: 0
   //   });
   // })
-  DB.then((result) => {
-    var connection = result.connection;
-    var data = [];
-    console.log("SELECT * from `" + table + "` LIMIT " + from + " , " + to + " ")
-    connection.query("SELECT * from "+ table  )
-      .on('error', function (err) {
-        // Do something about error in the query
-      })
-      .stream()
-      .pipe(new stream.Transform({
-        objectMode: true,
-        transform: function (row, encoding, callback) {
-          console.log(row, 'row')
-          if (data.length == 0) {
-            // res.write('{"status":1,"data":['+JSON.stringify(row));
-          } else {
-            // res.write(","+JSON.stringify(row));
-
-          }
-          data.push(row);
-          callback();
-
-        }
-      }))
-      .on('finish', function () {
-        //res.write("]}");
-
-        connection.end();
-        // res.end()
-        res.send({ status: 1, data: data });
-      });
-
-  }).catch((error) => {
-    console.log(error, 'error')
-    res.status(500).send({
-      message: error,
-      status: 0
-    });
-  })
 }
 /**get the sql result of a table*/
 exports.getSqlData = async function (req, res) {
 
-  var db = req.body.dbDetails;
-  var sql = req.body.sql;
-  var DB = DBHelper.createConnection(db);
-
-
-  DB.then((result) => {
-    var connection = result.connection;
-
-    connection.query(sql + ' LIMIT 20', function (error, results, fields) {
-      if (error) {
-        res.status(500).send({
-          message: error,
-          status: 0
-        });
-      } else {
-        res.status(200).send({
-          status: 1,
-          data: results
-        });
-      }
+  var data = req.body.dbDetails;
+  var {sql} = req.body
+  try {
+  if (data.type == 'PostgreSQL') {
+    var results = await PostgreSQL.getSqlData(data,sql);
+    res.status(200).send({
+      status: 1,
+      data: results
     });
-    connection.end();
-  }).catch((error) => {
-    res.status(500).send({
-      message: error,
-      status: 0
+  } else if (data.type == 'MySQL') {
+    var results = await MySQl.getSqlData(data,sql);
+    res.status(200).send({
+      status: 1,
+      data: results
     });
-  })
+  } else {
+    res.status(200).send({
+      status: 0,
+      data: [],
+      message: "Wrong DB Type"
+    });
+    return;
+  }
+ 
+
+  } catch (e) {
+    res.status(200).send({
+      status: 0,
+      data: [],
+      message: e
+    });
+    return;
+  }
 
 };
 
@@ -287,33 +316,6 @@ exports.getColRowValue = async function (req, res) {
 
 
 
-async function getTableResultSet(data) {
-  return new Promise(async (resolve, reject) => {
-
-    var db = await DBHelper.createConnection(data.dbDetails);
-
-
-    if (db && db.status == 1) {
-
-      db.connection.query("SELECT * from " + data.dbTable, function (error, results, fields) {
-
-        console.log('fields', fields[0].name)
-        if (error) {
-          console.log('err', error)
-          reject(0)
-        } else {
-          resolve({ results: results, fields: fields })
-        }
-      });
-
-
-    } else {
-
-      reject(0)
-    }
-  });
-}
-
 
 /**rollback function get the output table and get the results from db and send them back*/
 exports.rollbackPoll = async function (req, res) {
@@ -322,10 +324,10 @@ exports.rollbackPoll = async function (req, res) {
   for (var i = 0; i < data.length; i++) {
     var fn = data[i].function;
     var output_table_info = data[i].table;
-    console.log(fn, output_table_info)
-    var resultSetR = await getTableResultSet(output_table_info)
+  
+    var resultSetR = await  DBHelper.getTableResultSet(output_table_info)
     resultSet = resultSetR.results
-    console.log(resultSet, 'resultSet')
+   
     output.push({ 'output_table': output_table_info.name, 'resultSet': resultSet })
   }
   res.status(200).send({

@@ -16,14 +16,14 @@ router.all('/add/database', DBController.addDatabase);
 //get the tables list of a particular table
 router.all('/getTables', DBController.getTables);
 //get the tables list of a particular table
-router.all('/tables/:db_id', DBController.listTables);
+//////////router.all('/tables/:db_id', DBController.listTables);
 //to get the data from a table
 router.all('/getResults/:table' , DBController.getTableData);
 //to get the meta data about a database table
 router.all('/getMetaData/:table' , DBController.getMetaData);
 //to get the result of sql statement - data link
 router.all('/getSqlData' , DBController.getSqlData);
-//to get the value of one particular set by row and col value
+//to get the value of one particular set by row and col value- not used 
 router.all('/getValue/:table/:col/:row', DBController.getColRowValue);
 
 //router.all('/execuatePoll', DBController.execuatePoll);

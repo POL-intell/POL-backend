@@ -25,6 +25,7 @@ exports.execuatePoll = async function (req, res) {
       var existResultSet = resultSetData.filter((t) => t.virtual_table == output_table_info.name)
       if (existResultSet.length == 0) {
         resultSet = await DBHelper.getTableResultSet(output_table_info, output_table_info_limit);
+       // console.log(resultSet,'resultSet P P ')
         resultSet = resultSet.results
         var fieldsData = await DBHelper.getTableResultSet(output_table_info, output_table_info_limit).fields;
         resultSetData.push({ 'virtual_table': output_table_info.name, 'resultSet': resultSet, 'fields': fieldsData })
@@ -105,14 +106,16 @@ exports.execuatePoll = async function (req, res) {
 
           }
 
-
+          
           var virtul_table_info = tables_information.filter((t) => t.name == virtual_table)[0]
-
+         
           var inner_result_set = [];
 
           var existResultSet = resultSetData.filter((t) => t.virtual_table == virtual_table)
-          if (existResultSet.length == 0) {
+         // console.log(existResultSet.length ,'ln',existResultSet)
+          if (existResultSet.length == 0 ) {
             var inner_result_set_data = await DBHelper.getTableResultSet(virtul_table_info, output_table_info_limit);
+            console.log(inner_result_set_data,'new upr')
             inner_result_set = inner_result_set_data.results
             var fieldsData = inner_result_set_data.fields
             resultSetData.push({ 'virtual_table': virtual_table, 'resultSet': inner_result_set, 'fields': fieldsData })
@@ -120,6 +123,7 @@ exports.execuatePoll = async function (req, res) {
             inner_result_set = existResultSet[0].resultSet
           }
 
+          console.log('virtul_table_info u u u u',inner_result_set,'pp pp')
 
           try {
             //   console.log(col_position,row_position,inner_result_set)
@@ -138,7 +142,7 @@ exports.execuatePoll = async function (req, res) {
             // console.log('err')
           }
 
-          //console.log('enddddddd',pskeleton)
+         console.log('enddddddd',pskeleton)
         }
 
 
@@ -431,6 +435,7 @@ function batch(parallelLimit, data) {
 
 /**process the batched data*/
 function process(data) {
+  console.log('processsssssssssssssssssssssssssssssssssssssssssssssssss',data)
 
   var db = data.db_connection;
   var updateCol = data.output_field;
@@ -454,15 +459,26 @@ function process(data) {
       }
 
       var query = 'update ' + output_table_info.dbTable + '  set ' + updateCol + '=' + val + where
-      console.log(query, 'query')
-      db.connection.query(query, function (error, results, fields) {
-        cb();
-        if (error) {
-          console.log(error)
-        } else {
-
-        }
-      });
+      console.log(query, 'query',output_table_info.type)
+      if(output_table_info.dbDetails.type=='PostgreSQL'){
+        db.connection.query(query, function (error, results, fields) {
+          cb();
+          if (error) {
+            console.log(error)
+          } else {
+            console.log(results)
+          }
+        });
+      }else if(output_table_info.dbDetails.type=='MySQL'){
+        db.connection.query(query, function (error, results, fields) {
+          cb();
+          if (error) {
+            console.log(error)
+          } else {
+            console.log(results)
+          }
+        });
+      }
     } else {
       console.log('errrrrr hereeee')
     }
