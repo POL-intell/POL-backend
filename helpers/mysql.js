@@ -188,6 +188,7 @@ exports.getTableData = async function (config, table) {
                         //console.log('Received batch:', batch);
                         // process the batch of rows
                         //data.concat(batch);
+                       // console.log('fetched batch',count(batch))
                         data = [...data, ...batch]
                     })
                     .on('end', function () {

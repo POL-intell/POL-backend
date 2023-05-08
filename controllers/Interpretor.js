@@ -115,15 +115,16 @@ exports.execuatePoll = async function (req, res) {
          // console.log(existResultSet.length ,'ln',existResultSet)
           if (existResultSet.length == 0 ) {
             var inner_result_set_data = await DBHelper.getTableResultSet(virtul_table_info, output_table_info_limit);
-            console.log(inner_result_set_data,'new upr')
+           // console.log(inner_result_set_data,'new upr')
             inner_result_set = inner_result_set_data.results
             var fieldsData = inner_result_set_data.fields
             resultSetData.push({ 'virtual_table': virtual_table, 'resultSet': inner_result_set, 'fields': fieldsData })
           } else {
+           // console.log('exist')
             inner_result_set = existResultSet[0].resultSet
           }
 
-          console.log('virtul_table_info u u u u',inner_result_set,'pp pp')
+          //console.log('virtul_table_info u u u u','pp pp')
 
           try {
             //   console.log(col_position,row_position,inner_result_set)
@@ -142,7 +143,7 @@ exports.execuatePoll = async function (req, res) {
             // console.log('err')
           }
 
-         console.log('enddddddd',pskeleton)
+         //console.log('enddddddd',pskeleton)
         }
 
 
