@@ -197,7 +197,7 @@ exports.commitPoll = async function (req, res) {
       var fn = functions[f];
       var output_table_info = functions[f].table;
       var output_table_db_connection = await DBHelper.createConnection(output_table_info.dbDetails);
-      console.log(output_table_info, 'output_table_info')
+      //console.log(output_table_info, 'output_table_info')
 
       var resultSet = [];
       var fields = [];
@@ -212,7 +212,7 @@ exports.commitPoll = async function (req, res) {
         try {
           var uniqueCall = await DBHelper.getUniqueCol(output_table_info.dbDetails, output_table_info.dbTable);
           whereCol = uniqueCall.cols;
-          console.log(whereCol, 'whereColwhereColwhereCol')
+          //console.log(whereCol, 'whereColwhereColwhereCol')
         } catch (e) {
           res.status(200).send({
             status: 0,
@@ -357,7 +357,7 @@ exports.commitPoll = async function (req, res) {
               //update table columns cells
               batchOperationCounter++
               try {
-                console.log(i, M)
+                //console.log(i, M)
                 await batchOperationData.push({ 'where': wherecolVal, 'output_field': v, 'value': result, 'db_connection': output_table_db_connection, 'output_table_info': output_table_info });
                 if (batchOperationCounter == 50000 || i == M) {
 
@@ -384,7 +384,7 @@ exports.commitPoll = async function (req, res) {
       async.series(batches, function (err, results) {
         if (err) console.log("Done! Error: ", err);
         console.log(new Date());
-        console.log('results', results)
+       // console.log('results', results)
       });
 
       final_res.push({
@@ -436,7 +436,7 @@ function batch(parallelLimit, data) {
 
 /**process the batched data*/
 function process(data) {
-  console.log('processsssssssssssssssssssssssssssssssssssssssssssssssss',data)
+//  console.log('processsssssssssssssssssssssssssssssssssssssssssssssssss',data)
 
   var db = data.db_connection;
   var updateCol = data.output_field;
@@ -460,14 +460,15 @@ function process(data) {
       }
 
       var query = 'update ' + output_table_info.dbTable + '  set ' + updateCol + '=' + val + where
-      console.log(query, 'query',output_table_info.type)
+   
+   //   console.log(query, 'query',output_table_info.type)
       if(output_table_info.dbDetails.type=='PostgreSQL'){
         db.connection.query(query, function (error, results, fields) {
           cb();
           if (error) {
             console.log(error)
           } else {
-            console.log(results)
+           // console.log(results)
           }
         });
       }else if(output_table_info.dbDetails.type=='MySQL'){
@@ -476,7 +477,7 @@ function process(data) {
           if (error) {
             console.log(error)
           } else {
-            console.log(results)
+            //console.log(results)
           }
         });
       }
