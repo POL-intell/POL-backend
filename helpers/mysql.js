@@ -188,11 +188,11 @@ exports.getTableData = async function (config, table) {
                         //console.log('Received batch:', batch);
                         // process the batch of rows
                         //data.concat(batch);
-                       // console.log('fetched batch',count(batch))
+                        console.log('fetched batch',batch.length)
                         data = [...data, ...batch]
                     })
                     .on('end', function () {
-                        //console.log('Finished processing all rows.', data);
+                        console.log('Finished processing all rows.', data.length);
                         resolve(data)
                         db.connection.end();
                     });
@@ -210,34 +210,60 @@ exports.getSqlData = async function (config, sql) {
         makeConnection(config).then((db) => {
             var data = [];
             if (db && db.status == 1) {
-                db.connection.query(sql)
-                    .on('error', function (err) {
-                        // Do something about error in the query
-                    })
-                    .stream()
-                    .pipe(new stream.Transform({
-                        objectMode: true,
-                        transform: function (row, encoding, callback) {
-                            //console.log(row, 'row')
-                            if (data.length == 0) {
-                                // res.write('{"status":1,"data":['+JSON.stringify(row));
-                            } else {
-                                // res.write(","+JSON.stringify(row));
+                // db.connection.query(sql)
+                //     .on('error', function (err) {
+                //         console.log(err,'errrr')
+                //        // reject(0)
+                       
+                //     })
+                //     .stream()
+                //     .pipe(new stream.Transform({
+                //         objectMode: true,
+                //         transform: function (row, encoding, callback) {
+                           
+                //             data.push(row);
+                //             callback();
 
-                            }
-                            data.push(row);
-                            callback();
+                //         }
+                //     }))
+                //     .on('finish', function () {
+                //         db.connection.end();
+                //         resolve(data)
+                       
+                //     });
 
-                        }
-                    }))
-                    .on('finish', function () {
-                        //res.write("]}");
+                const query = db.connection.query(sql).on('error', function (err) {
+                    console.log(err)
+                    reject(err)
+                });
+                const stream = query.stream();
+              
+                // Handle stream errors
+                stream.on('error', (err) => {
+                  console.error('Stream error:', err);
+                  reject(err)
+                });
+              
+                // Process data from the stream
+                stream.on('data', (row) => {
+                  // Process each row
+                  data.push(row);
+                });
+              
+                // Release the connection back to the pool when finished
+                stream.on('end', () => {
+                    db.connection.end();
+                  console.log('Stream ended');
+                  resolve(data)
+                  
+                });
+              
+           
+              
+              
+              
 
-                        db.connection.end();
-                        resolve(data)
-                        // res.end()
-                        // res.send({ status: 1, data: data });
-                    });
+              
 
             } else {
                 reject(0)

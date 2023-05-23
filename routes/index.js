@@ -29,12 +29,15 @@ router.all('/getValue/:table/:col/:row', DBController.getColRowValue);
 //router.all('/execuatePoll', DBController.execuatePoll);
 //to exceute the pol function
 router.all('/execuatePoll', Interpretor.execuatePoll);
+//checl all function's unique column
+router.all('/checkUNiqueColumns', Interpretor.checkUNiqueColumns);
 //Commit the pol function executation
 router.all('/commitPoll', Interpretor.commitPoll);
 //Rollback the pol function
 router.all('/rollbackPoll', DBController.rollbackPoll);
 //Add pol column to table 
 router.all('/addPolColumn/:table', DBController.addPolColumn);
+router.all('/addPolColumns', DBController.addPolColumns);
 
 
 

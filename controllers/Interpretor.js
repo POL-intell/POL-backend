@@ -182,6 +182,57 @@ exports.execuatePoll = async function (req, res) {
   }
 }
 
+exports.checkUNiqueColumns = async function (req, res) {
+  var functions = req.body.functions;
+  var tables_information = req.body.tables
+
+  var resultSetData = [];
+  var final_res = [];
+  var required_col=[];
+
+
+    for (var f = 0; f < functions.length; f++) {
+      var fn = functions[f];
+      var output_table_info = functions[f].table;
+    //  var output_table_db_connection = await DBHelper.createConnection(output_table_info.dbDetails);
+    try {
+      if (output_table_info.dbDetails.type == 'PostgreSQL') {
+        var uniqueCall = await PostgreSQL.getUniqueCol(output_table_info.dbDetails, output_table_info.dbTable);
+        
+      } else if (data.type == 'MySQL') {
+        var uniqueCall = await MySQl.getUniqueCol(req.body, table);
+        
+      } 
+
+    }catch (e) {
+
+      required_col.push(output_table_info.dbTable)
+
+     
+    }
+  }
+
+    if(required_col.length>0){
+      required_col = required_col.filter(function (value, index, array) { 
+        return array.indexOf(value) === index;
+      });
+       res.status(200).send({
+        status: 0,
+        data: [],
+        message: "POL need at least one column of unique key in "+required_col.join(', ')+" table(s) to work, since no such column found, POL column must be added to the database table. Are you agree to this modification?"
+      });
+      return;
+
+    }else{
+      res.status(200).send({
+        status: 1
+      });
+      return;
+
+    }
+  
+}
+
 /**commit pol accepts functions and calcualte the functions and save the results into  table*/
 exports.commitPoll = async function (req, res) {
 

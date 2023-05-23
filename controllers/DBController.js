@@ -131,6 +131,7 @@ exports.getTableData = async function (req, res) {
         });
       } else if (data.type == 'MySQL') {
         var results = await MySQl.getTableData(data, table);
+        console.log('comes here ')
         res.status(200).send({
           status: 1,
           data: results
@@ -353,6 +354,36 @@ exports.addPolColumn = async function (req, res) {
       message: 'Something went wrong while adding column'
     });
 
+  }
+}
+
+/**Add pol column in the multiple table*/
+exports.addPolColumns = async function (req, res) {
+  var functions = req.body.functions;
+
+
+
+
+  for (var f = 0; f < functions.length; f++) {
+      var fn = functions[f];
+      var output_table_info = functions[f].table;
+    try {
+
+      var result = await DBHelper.addPolColumn(output_table_info.dbDetails, output_table_info.dbTable);
+      res.status(200).send({
+        status: 1,
+        message: 'Pol column added successfully.'
+      });
+
+    }catch (e) {
+
+      res.status(200).send({
+        status: 0,
+        message: 'Something went wrong while adding column'
+      });
+
+     
+    }
   }
 }
 

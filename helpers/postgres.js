@@ -209,8 +209,18 @@ exports.getSqlData = async function (config, sql) {
         makeConnection(config).then((db) => {
             var data = [];
             if (db && db.status == 1) {
+                console.log(sql,'sql')
+                sql = sql.replace(/`/g,'')
                 const query = new QueryStream(sql)
-                const stream = db.connection.query(query)
+                const stream = db.connection.query(query) .on('error', function (err) {
+                    console.log(err)
+                    reject(err)
+                })
+
+                stream.on('error', (err) => {
+                    console.error('Stream error:', err);
+                    reject(err)
+                });
 
                 stream.on('data', (row) => {
                     //console.log(row)
