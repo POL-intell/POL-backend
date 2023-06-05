@@ -3,7 +3,8 @@ var express = require('express');
 var router = express.Router();
 var DBHelper = require('../helpers/db');
 var async = require('async');
-
+var MySQl = require('../helpers/mysql');
+var PostgreSQL = require('../helpers/postgres');
 
 /**execute pol accepts functions and calcualte the functions and return the result back for output table*/
 exports.execuatePoll = async function (req, res) {
@@ -199,13 +200,14 @@ exports.checkUNiqueColumns = async function (req, res) {
       if (output_table_info.dbDetails.type == 'PostgreSQL') {
         var uniqueCall = await PostgreSQL.getUniqueCol(output_table_info.dbDetails, output_table_info.dbTable);
         
-      } else if (data.type == 'MySQL') {
-        var uniqueCall = await MySQl.getUniqueCol(req.body, table);
+      } else if (output_table_info.dbDetails.type == 'MySQL') {
+        var uniqueCall = await MySQl.getUniqueCol(output_table_info.dbDetails, output_table_info.dbTable);
         
       } 
 
     }catch (e) {
 
+      console.log(e,'eee')
       required_col.push(output_table_info.dbTable)
 
      
