@@ -10,7 +10,7 @@ var PostgreSQL = require('../helpers/postgres');
 
 /**Add database and create connection to check id DB is connectting or not*/
 exports.addDatabase = async function (req, res) {
-
+  
   var data = req.body
   var connection = await DBHelper.createConnection(data);
 

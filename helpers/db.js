@@ -6,7 +6,6 @@ var PostgreSQL = require('./postgres');
 
 //create connection to database by host,user,password and database. For this mysql2 package is used tomake connection to mysql 
 exports.createConnection = async function (config) {
-
 	return new Promise((resolve, reject) => {
 		if (config.type == 'PostgreSQL') {
 			//console.log(config, 'config h herr')

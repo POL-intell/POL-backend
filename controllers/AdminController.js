@@ -9,18 +9,22 @@ var UserFile = require('../models/UserFile');
 var Folder = require('../models/Folder');
 var Temp = require('../models/Temp');
 /* GET home page. */
-const stripe = require('stripe')('sk_test_51ImKQbAMjNDVHKZlXycRU5zEeZlyZW7HHL25yLBenlFeKrkiuiM3Xgje8XAYnKpbaa7i2gLSU0p6XgX5gIQlCADD00F60in1Rw');
+const stripe = require('stripe')('sk_test_51NQ4fmAkUiKpvdL3NF0vA1uM5yCf0o5fmfsBblqFLGLhP9OAu0h0laGdO6571MM5CPlu2KZtfBmgo5MtVWh6W10h00eP38kfab');
 const bcrypt = require('bcrypt');
 var jwt = require('jsonwebtoken');
+const Discount = require('../models/Discount');
 const saltRounds = 10;
 
 
 /**Get all users list from users table */
 exports.usersList = async function (req, res) {
 
-    var users = await User.where({}).fetchAll();
+    var users = await User.where({}).fetchAll({ withRelated: [{
+        'discount': (qb) => {
+          qb.where('is_active', true).limit(1);
+        }
+    }]});
     users = users.toJSON();
-
 
 
     res.status(200).send({
@@ -36,7 +40,7 @@ exports.usersList = async function (req, res) {
 /** Create new user */
 exports.userAdd = async function (req, res) {
     var data = req.body
-
+    console.log("data:::::>>>",data)
     var existusername = await User.where({ 'username': data.username }).count();
     if (existusername > 0) {
         res.status(200).send({
@@ -70,6 +74,26 @@ exports.userAdd = async function (req, res) {
         })
             .save(null, { method: 'insert' });
 
+        if(data && data.discount_by_percentage){
+            const coupon_name = "DISCOUNT" + data.discount_by_percentage
+            const coupon = await stripe.coupons.create({
+                percent_off: data.discount_by_percentage,
+                duration: 'forever',
+                name:coupon_name
+            });
+            // Save the new discount
+            const newDiscount = await new Discount({
+            'coupon_code': coupon.id,
+            'is_active': 1,
+            'type': "user_specific",
+            'discount_by_percentage': data.discount_by_percentage,
+            'user_id':user.id
+            }).save(null, { method: 'insert' });
+    
+            // Update the is_active property of all discounts to 0 except for the new discount
+            await Discount.query().where({'type':'user', 'user_id' : user.id}).whereNot('id', newDiscount.id).update({ is_active: 0 });
+            
+        }
         res.status(200).send({
             message: "Successfully Added",
             status: 1
@@ -82,7 +106,7 @@ exports.userAdd = async function (req, res) {
 exports.userUpdate = async function (req, res) {
     var data = req.body
 
-
+    console.log("req.body",req.body)
 
     bcrypt.hash(data.password, saltRounds, async function (err, hash) {
 
@@ -98,8 +122,27 @@ exports.userUpdate = async function (req, res) {
             'type': data.type,
             'span': data.span
         }, { patch: true });
+        if(data && data.discount_by_percentage){
+            const coupon_name = "DISCOUNT" + data.discount_by_percentage
+            const coupon = await stripe.coupons.create({
+                percent_off: data.discount_by_percentage,
+                duration: 'forever',
+                name:coupon_name
+            });
+            // Save the new discount
+            const newDiscount = await new Discount({
+            'coupon_code': coupon.id,
+            'is_active': 1,
+            'type': "user_specific",
+            'discount_by_percentage': data.discount_by_percentage,
+            'user_id':data.ID
+            }).save(null, { method: 'insert' });
 
-
+            // Update the is_active property of all discounts to 0 except for the new discount
+            await Discount.query().where({'type':'user_specific', 'user_id' : data.ID}).whereNot('id', newDiscount.id).update({ is_active: 0 });
+        }else{
+            await Discount.query().where({'type':'user_specific', 'user_id' : data.ID}).update({ is_active: 0 });
+        }
         res.status(200).send({
             message: "Successfully Updated",
             status: 1
@@ -151,4 +194,70 @@ exports.consoleUserAdd = async function (req, res) {
 
         }
     })
+}
+
+
+exports.userUpdateTrackedTime = async function(req,res){
+    try{
+        let data = req.body
+        let userData = await User.where({ 'ID': req.user.ID }).fetch()
+        const currentUsedValue = userData.get('used');
+        const updatedUsedValue = currentUsedValue + req.body.used;
+        await User.where({ 'ID': req.user.ID }).save({ 'used': updatedUsedValue }, { patch: true });
+        res.status(200).send({
+            message: "Successfully Updated",
+            status: 1
+        });
+    }catch(err){
+        console.log("Error userUpdateTrackedTime",err)
+
+    }
+}
+
+exports.createCoupon= async function(req,res){
+    try{
+        const data = req.body;
+        const coupon_name = generateRandomString();
+        const coupon = await stripe.coupons.create({
+            percent_off: data.discount_by_percentage,
+            duration: 'forever',
+            name:coupon_name
+        });
+        // Save the new discount
+        const newDiscount = await new Discount({
+        'coupon_code': coupon.id,
+        'is_active': 1,
+        'type': data.type,
+        'discount_by_percentage': data.discount_by_percentage
+        }).save(null, { method: 'insert' });
+
+        // Update the is_active property of all discounts to 0 except for the new discount
+        await Discount.query().where('type', 'general').whereNot('id', newDiscount.id).update({ is_active: 0 });
+        
+        res.status(200).send({
+            message: "Coupon Created Successfully ",
+            status: 1,
+        });
+    }catch(err){
+        console.log("Error in createCoupon",err)
+    }
+}
+
+
+exports.fetchActiveCoupon= async function(req,res){
+    try{
+        let activeCoupon= await Discount.where({ 'is_active': 1 , 'type':'general'}).fetch();
+        activeCoupon = activeCoupon.toJSON()
+        console.log("activeCoupon",activeCoupon)
+        res.status(200).send({
+            status: 1,
+            activeCoupon:activeCoupon
+        });
+    }catch(err){
+        console.log("Error in fetchActiveCoupon",err)
+        res.status(200).send({
+            status: 1,
+            activeCoupon:{}
+        });
+    }
 }

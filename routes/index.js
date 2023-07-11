@@ -47,6 +47,9 @@ router.get('/plans' , AuthController.plans);
 router.post('/login' , AuthController.login);
 
 router.post('/subscribe', auth_middleware.auth,AuthController.subscribe);
+router.post('/subscribe/test-plan', auth_middleware.auth,AuthController.subscribeTestPlan);
+router.post('/subscribe/paid-plan', auth_middleware.auth,AuthController.subscribePaidPlan);
+
 router.post('/user_detail', auth_middleware.auth,AuthController.userDetail);
 router.post('/save_file', auth_middleware.auth,AuthController.saveFile);
 router.post('/update_file', auth_middleware.auth,AuthController.updateFile);
@@ -76,5 +79,12 @@ router.post('/user/update', auth_middleware.auth,AdminController.userUpdate);
 router.post('/user/delete', auth_middleware.auth,AdminController.userDelete);
 router.post('/user/delete', auth_middleware.auth,AdminController.userDelete);
 router.post('/console_user/add', auth_middleware.auth,AdminController.consoleUserAdd);
+
+router.post('/user/update-time-tracker', auth_middleware.auth,AdminController.userUpdateTrackedTime);
+router.post('/user/update-subscription-type', auth_middleware.auth,AuthController.updateSubscriptionType);
+router.post('/createCoupon', auth_middleware.auth,AdminController.createCoupon);
+router.get('/fetchActiveCoupon', auth_middleware.auth,AdminController.fetchActiveCoupon);
+router.post('/user/update-subscription-item', auth_middleware.auth,AuthController.updatePerAppQuantity);
+
 
 module.exports = router;
