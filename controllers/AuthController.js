@@ -20,7 +20,7 @@ const saltRounds = 10;
 /**get all the plans list and their details*/
 exports.plans = async function (req, res) {
     var plans = await Plan.where({}).fetchAll();
-    
+  
     res.status(200).send({
         message: "Plan list",
         status: 1,
@@ -693,7 +693,7 @@ exports.subscribePaidPlan= async function(req,res){
         let per_minute_price_id = plan_detail.per_minute_price_id
         let per_app_price_id = data.plan_term === 'monthly' ? plan_detail.monthly_per_app_price_id : plan_detail.yearly_per_app_price_id
         let amount_paid = data.plan_term === 'monthly' ? parseInt(plan_detail.monthly_per_app * 5) : parseInt(plan_detail.yearly_per_app * 5)
-
+        let span = data.plan_term === 'monthly' ? 'M' : 'A'
         if(user.customer_id === null){
             let customer;
             if(coupon && Object.keys(coupon).length > 0){
@@ -728,44 +728,48 @@ exports.subscribePaidPlan= async function(req,res){
             }
         }
 
-
-        const subscription = await stripe.subscriptions.create({
-            customer: customerId,
-            items: [
-                { 
-                    price: per_app_price_id, 
-                    quantity: 5
-                },
-                {
-                    price:per_minute_price_id,
-                    quantity:0
+        if(customerId !== ''){
+            const subscription = await stripe.subscriptions.create({
+                customer: customerId,
+                items: [
+                    { 
+                        price: per_app_price_id, 
+                        quantity: 5
+                    },
+                    {
+                        price:per_minute_price_id,
+                        quantity:0
+                    }
+                ],
+        
+            })
+            if(subscription){
+                await User.where({ 'ID': req.user.ID }).save({
+                    'type': plan_detail.code,
+                    'span' : span,
+                    'subscription_status': 1
+                }, { patch: true });
+           
+                let user_plan_obj = {
+                    'user_id': req.user.ID,
+                    'subscription_id': subscription.id,
+                    'amount_paid':amount_paid,
+                    'is_active': 1,
+                    'plan_type':data.plan_term,
+                    'plan_id':plan_detail.id
                 }
-            ],
+                if(coupon){
+                    user_plan_obj['coupon_id'] = coupon.coupon_code
+                }
+                await new UserPlans(user_plan_obj).save(null, { method: 'insert' });
     
-        })
-        console.log("subscription",subscription)
-        if(subscription){
-            await User.where({ 'ID': req.user.ID }).save({
-                'type': plan_detail.code,
-                'subscription_status': 1
-            }, { patch: true });
-            let user_plan_obj = {
-                'user_id': req.user.ID,
-                'subscription_id': subscription.id,
-                'amount_paid':amount_paid,
-                'is_active': 1,
-                'plan_type':data.plan_term
             }
-            if(coupon){
-                user_plan_obj['coupon_id'] = coupon.coupon_code
-            }
-            await new UserPlans(user_plan_obj).save(null, { method: 'insert' });
-
+            res.status(200).send({
+                message: "Payment Successfull",
+                status: 1
+            });
         }
-        res.status(200).send({
-            message: "Payment Successfull",
-            status: 1
-        });
+       
 
     }catch(err){
         console.log("Error in subscribePaidPlan",err)
@@ -775,7 +779,7 @@ exports.subscribePaidPlan= async function(req,res){
 exports.subscribeTestPlan= async function(req,res){
     try{
         const data = req.body
-        let plan_detail = await Plan.where({ 'plan_name': data.plan_name }).fetch();
+        check75
         plan_detail = plan_detail.toJSON()
         await User.where({ 'ID': req.user.ID }).save({
             'type': plan_detail.code,
@@ -805,7 +809,6 @@ exports.updatePerAppQuantity = async function(data){
                 }
             ]}
         );  
-        console.log("updateSubscription",updateSubscription)
         if(updateSubscription){
             return true
         }else{
@@ -837,3 +840,48 @@ exports.updatePerMinuteQuantity = async function(req,res){
         console.log("Error in updateSubscriptionType",err)
     }
 }
+
+exports.updateUserDetailsHook = async function(req,res){
+
+    try{
+        const {object} = req.body.data
+        let user = await User.where({'customer_id': object.customer}).fetch();
+        user = user.toJSON();
+        try{
+            await User.where({ 'ID': user.ID }).save({
+                "last_charge" : new Date()
+            }, { patch: true });
+        }catch{
+            let amount_paid = object.amount_paid/100
+            await new Payment({
+                'user_id': user.ID,
+                'transaction_id': object.subscription,
+                'amount': amount_paid,
+                'currency': object.currency,
+                'paid_status': object.paid,
+                'status': object.status,
+                'receipt_url': object.invoice_pdf
+            }).save(null, { method: 'insert' });
+        }
+        res.status(200).send({
+            message: "Updated Successfully ",
+            status: 1,
+        });
+    }catch(err){
+        console.log("Error in updateUserDetailsHook",err)
+    }
+}
+// body: {
+//     id: 'evt_1NSxE9AkUiKpvdL3zUuOPbz7',
+//     object: 'event',
+//     api_version: '2022-11-15',
+//     created: 1689145965,
+//     data: { object: [Object] },
+//     livemode: false,
+//     pending_webhooks: 3,
+//     request: {
+//       id: 'req_VHWN9FiVqjgI02',
+//       idempotency_key: '4e3e296b-354d-4876-8ae5-2d342133924d'
+//     },
+//     type: 'invoice.paid'
+//   },

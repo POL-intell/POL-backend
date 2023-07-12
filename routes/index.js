@@ -43,12 +43,13 @@ router.all('/addPolColumns', DBController.addPolColumns);
 
 //auth and payment
 router.post('/register' , AuthController.register);
-router.get('/plans' , AuthController.plans);
+router.post('/subscribe', auth_middleware.auth,AuthController.subscribe);
+router.get('/plans/' , AuthController.plans);
 router.post('/login' , AuthController.login);
 
 router.post('/subscribe', auth_middleware.auth,AuthController.subscribe);
-router.post('/subscribe/test-plan', auth_middleware.auth,AuthController.subscribeTestPlan);
-router.post('/subscribe/paid-plan', auth_middleware.auth,AuthController.subscribePaidPlan);
+router.post('/user/subscribe/test-plan', auth_middleware.auth,AuthController.subscribeTestPlan);
+router.post('/user/subscribe/paid-plan', auth_middleware.auth,AuthController.subscribePaidPlan);
 
 router.post('/user_detail', auth_middleware.auth,AuthController.userDetail);
 router.post('/save_file', auth_middleware.auth,AuthController.saveFile);
@@ -86,5 +87,5 @@ router.post('/createCoupon', auth_middleware.auth,AdminController.createCoupon);
 router.get('/fetchActiveCoupon', auth_middleware.auth,AdminController.fetchActiveCoupon);
 router.post('/user/update-subscription-item', auth_middleware.auth,AuthController.updatePerAppQuantity);
 
-
+router.post('/update-payment&last_charge',AuthController.updateUserDetailsHook)
 module.exports = router;
