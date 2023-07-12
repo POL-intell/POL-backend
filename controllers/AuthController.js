@@ -778,8 +778,6 @@ exports.subscribePaidPlan= async function(req,res){
 
 exports.subscribeTestPlan= async function(req,res){
     try{
-        const data = req.body
-        check75
         plan_detail = plan_detail.toJSON()
         await User.where({ 'ID': req.user.ID }).save({
             'type': plan_detail.code,
@@ -845,8 +843,22 @@ exports.updateUserDetailsHook = async function(req,res){
 
     try{
         const {object} = req.body.data
-        let user = await User.where({'customer_id': object.customer}).fetch();
+        let user = await User.where({'customer_id': object.customer}).fetch({ withRelated: ['plan_detail',{'user_plan': (qb) => {
+            qb.where('is_active', true).limit(1);
+          }}] });
         user = user.toJSON();
+        
+        let per_app_price_id =  user && user.user_plan && user.user_plan[0].plan_type === 'monthly' ? user.plan_detail.monthly_per_app_price_id : user.plan_detail.yearly_per_app_price_id
+
+        let per_minute_id = user.plan_detail.per_minute_price_id
+        
+        let subscription = await stripe.subscriptions.retrieve(
+            object.subscription
+        );
+   
+        const per_app_quantity = subscription.items.data.find(item => item.price.id === per_app_price_id);
+        const per_minute_quantity = subscription.items.data.find(item => item.price.id === per_minute_id);
+
         try{
             await User.where({ 'ID': user.ID }).save({
                 "last_charge" : new Date()
@@ -860,7 +872,10 @@ exports.updateUserDetailsHook = async function(req,res){
                 'currency': object.currency,
                 'paid_status': object.paid,
                 'status': object.status,
-                'receipt_url': object.invoice_pdf
+                'receipt_url': object.invoice_pdf,
+                'per_app_quantity': per_app_quantity.quantity,
+                'per_minute_quantity':per_minute_quantity.quantity
+
             }).save(null, { method: 'insert' });
         }
         res.status(200).send({
