@@ -778,6 +778,8 @@ exports.subscribePaidPlan= async function(req,res){
 
 exports.subscribeTestPlan= async function(req,res){
     try{
+        const {data} = req.body
+        let plan_detail = await Plan.where({ 'plan_name': data.plan_name }).fetch();
         plan_detail = plan_detail.toJSON()
         await User.where({ 'ID': req.user.ID }).save({
             'type': plan_detail.code,
@@ -835,7 +837,7 @@ exports.updatePerMinuteQuantity = async function(req,res){
             status: 1,
         });
     }catch(err){
-        console.log("Error in updateSubscriptionType",err)
+        console.log("Error in updatePerMinuteQuantity",err)
     }
 }
 
