@@ -278,8 +278,9 @@ exports.saveFile = async function (req, res) {
             let user_data = getUserData(req.user.ID)
             user_data = user_data.toJSON()
             let per_app_price_id = user_data && user_data.user_plan.length > 0 && user_data.user_plan[0].plan_type === 'monthly' ? user_data.plan_detail.monthly_per_app_price_id : user_data.plan_detail.yearly_per_app_price_id
-
+            
             let data = {
+                subscripton_id:user_data.user_plan[0].subscripton_id,
                 per_app_price_id: per_app_price_id, 
                 per_app_quantity: 1
             }
@@ -339,7 +340,7 @@ exports.getuserFiles = async function (req, res) {
 
 /**To save folder according to parnet folder of a user*/
 exports.saveFolder = async function (req, res) {
-
+    yearly_per_app_price_id
     var data = req.body
 
     var folder = await new Folder({
@@ -779,7 +780,6 @@ exports.subscribePaidPlan= async function(req,res){
 exports.subscribeTestPlan= async function(req,res){
     try{
         let plan_detail = await Plan.where({ 'plan_name': req.body.plan_name }).fetch();
-        console.log("plan_detail",plan_detail)
         plan_detail = plan_detail.toJSON()
         await User.where({ 'ID': req.user.ID }).save({
             'type': plan_detail.code,
@@ -800,46 +800,25 @@ exports.subscribeTestPlan= async function(req,res){
 
 exports.updatePerAppQuantity = async function(data){
     try{
-        const updateSubscription = await stripe.subscriptions.update(
-            data.subscripton_id,
-            {items: [
-                { 
-                    price: per_app_price_id, 
-                    quantity: data.per_app_quantity
-                }
-            ]}
+        let subscription = await stripe.subscriptions.retrieve(
+            data.subscripton_id
+        );
+        const per_app_item = subscription.items.data.find(item => item.price.id === data.per_app_price_id);
+        await stripe.subscriptionItems.update(
+            per_app_item.id,
+            {
+                quantity : data.per_app_quantity,
+                proration_behavior: 'none'
+            }
         );  
-        if(updateSubscription){
-            return true
-        }else{
-            return false
-        }
+        
     }catch(err){
         console.log("Error in updateSubscriptionType",err)
         return false
     }
 }
 
-exports.updatePerMinuteQuantity = async function(req,res){
-    try{
-        const data = req.body
-        const updateSubscription = await stripe.subscriptions.update(
-            data.subscripton_id,
-            {items: [
-                { 
-                    price: per_app_price_id, 
-                    quantity: data.per_minute_quantity
-                }
-            ]}
-        );  
-        res.status(200).send({
-            message: "Updated Successfully ",
-            status: 1,
-        });
-    }catch(err){
-        console.log("Error in updatePerMinuteQuantity",err)
-    }
-}
+
 
 exports.updateUserDetailsHook = async function(req,res){
 
@@ -858,9 +837,16 @@ exports.updateUserDetailsHook = async function(req,res){
             object.subscription
         );
    
-        const per_app_quantity = subscription.items.data.find(item => item.price.id === per_app_price_id);
-        const per_minute_quantity = subscription.items.data.find(item => item.price.id === per_minute_id);
-
+        const per_app_item = subscription.items.data.find(item => item.price.id === per_app_price_id);
+        const per_minute_item = subscription.items.data.find(item => item.price.id === per_minute_id);
+        
+        await stripe.subscriptionItems.update(
+            per_minute_item.id,
+            {
+                quantity : 0,
+                proration_behavior: 'none'
+            }
+        );
         try{
             await User.where({ 'ID': user.ID }).save({
                 "last_charge" : new Date()
@@ -875,8 +861,8 @@ exports.updateUserDetailsHook = async function(req,res){
                 'paid_status': object.paid,
                 'status': object.status,
                 'receipt_url': object.invoice_pdf,
-                'per_app_quantity': per_app_quantity.quantity,
-                'per_minute_quantity':per_minute_quantity.quantity
+                'per_app_quantity': per_app_item.quantity,
+                'per_minute_quantity':per_minute_item.quantity
 
             }).save(null, { method: 'insert' });
         }
@@ -888,17 +874,4 @@ exports.updateUserDetailsHook = async function(req,res){
         console.log("Error in updateUserDetailsHook",err)
     }
 }
-// body: {
-//     id: 'evt_1NSxE9AkUiKpvdL3zUuOPbz7',
-//     object: 'event',
-//     api_version: '2022-11-15',
-//     created: 1689145965,
-//     data: { object: [Object] },
-//     livemode: false,
-//     pending_webhooks: 3,
-//     request: {
-//       id: 'req_VHWN9FiVqjgI02',
-//       idempotency_key: '4e3e296b-354d-4876-8ae5-2d342133924d'
-//     },
-//     type: 'invoice.paid'
-//   },
+

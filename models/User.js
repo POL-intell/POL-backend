@@ -29,6 +29,9 @@ module.exports =  bookshelf.Model.extend({
 },{
 	defaults: {
 	  subscription_status: 0 // Set the default value for the subscription_status column
-	}
+	},
+	// Enable cascading deletes
+	cascadeDelete: true,
+
 });
 

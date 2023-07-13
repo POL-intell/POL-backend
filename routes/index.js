@@ -78,7 +78,7 @@ router.get('/users/list', auth_middleware.auth,AdminController.usersList);
 router.post('/user/add', auth_middleware.auth,AdminController.userAdd);
 router.post('/user/update', auth_middleware.auth,AdminController.userUpdate);
 router.post('/user/delete', auth_middleware.auth,AdminController.userDelete);
-router.post('/user/delete', auth_middleware.auth,AdminController.userDelete);
+// router.post('/user/delete', auth_middleware.auth,AdminController.userDelete);
 router.post('/console_user/add', auth_middleware.auth,AdminController.consoleUserAdd);
 
 router.post('/user/update-time-tracker', auth_middleware.auth,AdminController.userUpdateTrackedTime);

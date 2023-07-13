@@ -21,11 +21,11 @@ exports.usersList = async function (req, res) {
 
     var users = await User.where({}).fetchAll({ withRelated: [{
         'discount': (qb) => {
-          qb.where('is_active', true).limit(1);
+          qb.where('is_active', true)
         }
     }]});
     users = users.toJSON();
-
+    console.log("users::::::::>>>",users)
 
     res.status(200).send({
         message: "users list",
@@ -246,9 +246,14 @@ exports.createCoupon= async function(req,res){
 
 exports.fetchActiveCoupon= async function(req,res){
     try{
-        let activeCoupon= await Discount.where({ 'is_active': 1 , 'type':'general'}).fetch();
-        activeCoupon = activeCoupon.toJSON()
-        console.log("activeCoupon",activeCoupon)
+        let activeCoupon = {}
+        let count = await Discount.where({ 'is_active': 1 , 'type':'general'}).count();
+        if(count > 0){
+            activeCoupon = await Discount.where({ 'is_active': 1 , 'type':'general'}).fetch();
+            activeCoupon = activeCoupon.toJSON()
+            console.log("activeCoupon",activeCoupon)
+           
+        }
         res.status(200).send({
             status: 1,
             activeCoupon:activeCoupon

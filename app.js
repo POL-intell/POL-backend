@@ -6,6 +6,7 @@ var logger = require('morgan');
 const cors = require('cors')
 
 const indexRouter = require('./routes/index');
+const {job,job2} = require('./schedule.js') ;
 
 
 const app = express();
@@ -29,7 +30,8 @@ app.use('/', indexRouter);
 
 
 
-
+job.start()
+job2.start()
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
   next(createError(404));
