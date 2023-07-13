@@ -778,8 +778,8 @@ exports.subscribePaidPlan= async function(req,res){
 
 exports.subscribeTestPlan= async function(req,res){
     try{
-        const {data} = req.body
-        let plan_detail = await Plan.where({ 'plan_name': data.plan_name }).fetch();
+        let plan_detail = await Plan.where({ 'plan_name': req.body.plan_name }).fetch();
+        console.log("plan_detail",plan_detail)
         plan_detail = plan_detail.toJSON()
         await User.where({ 'ID': req.user.ID }).save({
             'type': plan_detail.code,
