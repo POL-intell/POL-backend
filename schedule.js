@@ -2,11 +2,10 @@ const cron = require('node-cron');
 const User = require('./models/User');
 let knex = require('knex');
 let knexfile = require('./knexfile.js');
-const Plan = require('./models/Plan');
 let db = knex(knexfile.development);
 const stripe = require('stripe')('sk_test_51NQ4fmAkUiKpvdL3NF0vA1uM5yCf0o5fmfsBblqFLGLhP9OAu0h0laGdO6571MM5CPlu2KZtfBmgo5MtVWh6W10h00eP38kfab');
-
-const  updatePerMinuteQuantityScheduler= cron.schedule('10 35  14 * * *', async () => {
+const Discount = require('./models/Discount');
+const  updatePerMinuteQuantityScheduler= cron.schedule('31  17 * * *', async () => {
   try{
     let allUsers = await db('users')
       .where('users.subscription_status', 1)
@@ -15,19 +14,31 @@ const  updatePerMinuteQuantityScheduler= cron.schedule('10 35  14 * * *', async 
       for(let k in allUsers){   
         let user_data =  await User.where({'ID': allUsers[k].ID}).fetch({ withRelated: ['plan_detail',{'user_plan': (qb) => {
           qb.where('is_active', true).limit(1);
+        }}, {'discount': (qb) => {
+          qb.where('is_active', true)
         }}] });
         user_data = user_data.toJSON()
         await delay(1000)
-  
+        
         const incoming_invoice = await stripe.invoices.retrieveUpcoming({
           customer:user_data['customer_id'],
         });
+        console.log("incoming_invoice",incoming_invoice)
         let next_invoice_pay_date = incoming_invoice.next_payment_attempt * 1000
-        
+        let count = await Discount.where({ 'is_active': 1 , 'type':'general'}).count();
+        if(count > 0){
+            let activeCoupon = await Discount.where({ 'is_active': 1 , 'type':'general'}).fetch();
+            activeCoupon = activeCoupon.toJSON()
+            if(user_data.discount.length === 0 && incoming_invoice.discount && incoming_invoice.discount.coupon.id  !== activeCoupon.coupon_code){
+              await stripe.customers.update(
+                user_data.customer_id,
+                {coupon : activeCoupon.coupon_code}
+              );
+            }
+        }
+           
         if(incoming_invoice && user_data.used > 0 && user_data.plan_detail !== undefined && Object.keys(user_data.plan_detail).length > 0 && user_data.user_plan.length > 0){
-          console.log("isOneDayOrLessLeft(next_inoive_pay_date",isOneDayOrLessLeft(next_invoice_pay_date))
           if(isOneDayOrLessLeft(next_invoice_pay_date)){
-            console.log("user_data.plan_detail",user_data.plan_detail)
             let data = {
               'userId': user_data.ID,
               "per_minute_price_id": user_data.plan_detail.per_minute_price_id,
@@ -35,7 +46,6 @@ const  updatePerMinuteQuantityScheduler= cron.schedule('10 35  14 * * *', async 
               "subscripton_id" : user_data.user_plan[0].subscription_id
             }
             await updatePerMinuteQuantity(data)
-          
           }
         }
       }
@@ -44,7 +54,7 @@ const  updatePerMinuteQuantityScheduler= cron.schedule('10 35  14 * * *', async 
   }
 });
 
-const trackTrialPlanScheduler = cron.schedule('59 10 15 * * *', async () => {
+const trackTrialPlanScheduler = cron.schedule('40 36 15 * * *', async () => {
   try{
     let currentTime =  new Date().getTime()
     let count = await User.where({'trail_status' : 'start'}).count();
@@ -71,7 +81,7 @@ const trackTrialPlanScheduler = cron.schedule('59 10 15 * * *', async () => {
 });
 
 function isOneDayOrLessLeft(targetTime) {
-  const currentTime = new Date(1691868598000).getTime();
+  const currentTime = new Date(1691960993000).getTime();
   const differenceInTime = targetTime - currentTime;
 
   // Calculate the number of milliseconds in one day

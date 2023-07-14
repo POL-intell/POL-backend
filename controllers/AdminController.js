@@ -81,6 +81,7 @@ exports.userAdd = async function (req, res) {
                 duration: 'forever',
                 name:coupon_name
             });
+           
             // Save the new discount
             const newDiscount = await new Discount({
             'coupon_code': coupon.id,
@@ -105,13 +106,9 @@ exports.userAdd = async function (req, res) {
 /**Update user */
 exports.userUpdate = async function (req, res) {
     var data = req.body
-
-    console.log("req.body",req.body)
-
+    console.log("req.body",data)
     bcrypt.hash(data.password, saltRounds, async function (err, hash) {
-
-
-        await User.where({ 'ID': data.ID }).save({
+        let user  = await User.where({ 'ID': data.ID }).save({
             'password': hash,
             'first_name': data.first_name,
 
@@ -122,6 +119,7 @@ exports.userUpdate = async function (req, res) {
             'type': data.type,
             'span': data.span
         }, { patch: true });
+        user = user.toJSON()
         if(data && data.discount_by_percentage){
             const coupon_name = "DISCOUNT" + data.discount_by_percentage
             const coupon = await stripe.coupons.create({
@@ -129,6 +127,14 @@ exports.userUpdate = async function (req, res) {
                 duration: 'forever',
                 name:coupon_name
             });
+            console.log("user",user)
+            if(user.customer_id !== null){
+                console.log("update customer",user.customer_id)
+                await stripe.customers.update(
+                    user.customer_id,
+                    {coupon : coupon.id}
+                );
+            }
             // Save the new discount
             const newDiscount = await new Discount({
             'coupon_code': coupon.id,
@@ -217,7 +223,7 @@ exports.userUpdateTrackedTime = async function(req,res){
 exports.createCoupon= async function(req,res){
     try{
         const data = req.body;
-        const coupon_name = generateRandomString();
+        const coupon_name = "DISCOUNT" + data.discount_by_percentage;
         const coupon = await stripe.coupons.create({
             percent_off: data.discount_by_percentage,
             duration: 'forever',

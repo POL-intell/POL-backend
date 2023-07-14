@@ -707,6 +707,8 @@ exports.subscribePaidPlan= async function(req,res){
         if(user.customer_id === null){
             let customer;
             if(coupon && Object.keys(coupon).length > 0){
+                let discountAmount = (amount_paid * coupon.discount_by_percentage) / 100;
+                amount_paid = amount_paid - discountAmount
                 customer = await stripe.customers.create({
                     source: req.body.token.id,
                     description: 'By username : ' + user.username,
@@ -753,6 +755,7 @@ exports.subscribePaidPlan= async function(req,res){
                 ],
         
             })
+            console.log("subscription",subscription)
             if(subscription){
                 await User.where({ 'ID': req.user.ID }).save({
                     'type': plan_detail.code,
