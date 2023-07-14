@@ -31,38 +31,41 @@ exports.plans = async function (req, res) {
 
 /**login to pol bu username and password*/
 exports.login = async function (req, res) {
-    var data = req.body
-    var exist = await User.where({ 'username': data.username }).count();
-    if (exist == 0) {
-        res.status(200).send({
-            message: "Wrong credentials.",
-            status: 0
-        });
-    }
-    var user = await User.where({ 'username': data.username }).fetch();
-    user = user.toJSON();
-    bcrypt.compare(data.password, user.password, async function (err, result) {
-        if (result) {
-            var jwtToken = jwt.sign({ email: user.email, ID: user.ID }, 'RESTFULAPIs', { expiresIn: '60d' });
-            var user_detail = await getUserData(user.ID);
-            res.status(200).send({
-                message: "Login Successfull.",
-                status: 1,
-                token: jwtToken,
-                user_type: user.user_type,
-                subscription: user.span,
-                subscription_status: user_detail.subscription_status,
-                user_detail: user_detail,
-                trail_status:user_detail.trail_status
-            });
-        } else {
+    try{
+        var data = req.body
+        var exist = await User.where({ 'username': data.username }).count();
+        if (exist == 0) {
             res.status(200).send({
                 message: "Wrong credentials.",
                 status: 0
             });
         }
-    });
-
+        var user = await User.where({ 'username': data.username }).fetch();
+        user = user.toJSON();
+        bcrypt.compare(data.password, user.password, async function (err, result) {
+            if (result) {
+                var jwtToken = jwt.sign({ email: user.email, ID: user.ID }, 'RESTFULAPIs', { expiresIn: '60d' });
+                var user_detail = await getUserData(user.ID);
+                res.status(200).send({
+                    message: "Login Successfull.",
+                    status: 1,
+                    token: jwtToken,
+                    user_type: user.user_type,
+                    subscription: user.span,
+                    subscription_status: user_detail.subscription_status,
+                    user_detail: user_detail,
+                    trail_status:user_detail.trail_status
+                });
+            } else {
+                res.status(200).send({
+                    message: "Wrong credentials.",
+                    status: 0
+                });
+            }
+        });
+    }catch(err){
+        console.log("Error in login",err)
+    }
 }
 
 
@@ -215,12 +218,14 @@ exports.register = async function (req, res) {
     }
 
     bcrypt.hash(data.password, saltRounds, async function (err, hash) {
+        let phoneNumber = data.code + '-' + data.phone
+        console.log("phoneNumber",phoneNumber)
         var user = await new User({
             'username': data.username,
             'password': hash,
             'first_name': data.name,
             'email': data.email,
-            'mobile': data.phone,
+            'mobile': phoneNumber,
             'surname': data.family_name,
             'plain_password':data.password
         })
@@ -643,15 +648,19 @@ exports.delete_default_connection = async function (req, res) {
 
 /**Get the user data bu user id*/
 async function getUserData(id) {
-
-    var user = await User.where({ 'ID': id }).fetch({ withRelated: ['payment_detail', 'plan_detail', 'default_connection',{
-        'user_plan': (qb) => {
-          qb.where('is_active', true).limit(1);
-        }
-    }] });
-    user = user.toJSON();
-    console.log('user>>>>>>', user)
-    return user;
+   
+    try{
+        let user = await User.where({ 'ID': id }).fetch({ withRelated: ['payment_detail', 'plan_detail', 'default_connection',{
+            'user_plan': (qb) => {
+              qb.where('is_active', true).limit(1);
+            }
+        }] });
+        user = user.toJSON();
+        return user;
+    }catch(err){
+        console.log("Error in getUserDetails",err)
+    }
+    
 }
 
 exports.updateSubscriptionType=  async function(req,res){
@@ -774,6 +783,10 @@ exports.subscribePaidPlan= async function(req,res){
 
     }catch(err){
         console.log("Error in subscribePaidPlan",err)
+        res.status(200).send({
+            status: 0,
+            errMsg : err.message
+        });
     }
 }
 
@@ -794,6 +807,10 @@ exports.subscribeTestPlan= async function(req,res){
         });
     }catch(err){
         console.log("Error in subscribeTestPlan",err)
+        res.status(200).send({
+            status: 0,
+            errMsg : err.message
+        });
     }
 }
 

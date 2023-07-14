@@ -6,7 +6,7 @@ const Plan = require('./models/Plan');
 let db = knex(knexfile.development);
 const stripe = require('stripe')('sk_test_51NQ4fmAkUiKpvdL3NF0vA1uM5yCf0o5fmfsBblqFLGLhP9OAu0h0laGdO6571MM5CPlu2KZtfBmgo5MtVWh6W10h00eP38kfab');
 
-const job = cron.schedule('10 35  14 * * *', async () => {
+const  updatePerMinuteQuantityScheduler= cron.schedule('10 35  14 * * *', async () => {
   try{
     let allUsers = await db('users')
       .where('users.subscription_status', 1)
@@ -44,38 +44,29 @@ const job = cron.schedule('10 35  14 * * *', async () => {
   }
 });
 
-const job2 = cron.schedule('36 9 * * *', async () => {
-  console.log('running a task every two minutes');
+const trackTrialPlanScheduler = cron.schedule('40 27 14 * * *', async () => {
   try{
     let currentTime =  new Date().getTime()
-    let allUsers = await User.where({'trail_status' : 'start'}).fetchAll();
-    allUsers = allUsers.toJSON();
-    allUsers.forEach(async (user) => {
-      let startTime  = new Date(user.trail_start_date).getTime()
-      const timeDifference = Math.abs(currentTime - startTime);
-      const hours = Math.floor(timeDifference / (1000 * 60 * 60));
-      console.log("hours",hours)
-      if(hours > 336){
-        await User.where({ 'ID': user.ID }).save({
-          'trail_status': data.trail_status,
-          'trail_end_date': new Date(currentTime),
-        }, { patch: true });
-      }
-    });
-   
+    let count = await User.where({'trail_status' : 'start'}).count();
+    console.log("count",count)
+    if(count  > 0){   
+      let allUsers = await User.where({'trail_status' : 'start'}).fetchAll();
+      allUsers = allUsers.toJSON();
+      allUsers.forEach(async (user) => {
+        let startTime  = new Date(user.trail_start_date).getTime()
+        const timeDifference = Math.abs(currentTime - startTime);
+        const hours = Math.floor(timeDifference / (1000 * 60 * 60));
+        console.log("hours",hours)
+        if(hours > 336){
+          await User.where({ 'ID': user.ID }).save({
+            'trail_status': "end",
+            'trail_end_date': new Date(currentTime),
+          }, { patch: true });
+        }
+      });
+    }
   }catch  (err){
-    console.log("Error while inserting all news feeds",err)
-    allUsers.forEach(async (user) => {
-      let startTime  = new Date(user.trail_start_date).getTime()
-      const timeDifference = Math.abs(currentTime - startTime);
-      const hours = Math.floor(timeDifference / (1000 * 60 * 60));
-      if(hours > 336){
-        await User.where({ 'ID': user.ID }).save({
-          'trail_status': data.trail_status,
-          'trail_end_date': new Date(currentTime),
-        }, { patch: true });
-      }
-  });
+    console.log("Error in trackTrialPlanScheduler",err)    
   }
 });
 
@@ -122,4 +113,4 @@ const delay = ms => new Promise(res => setTimeout(res, ms));
 
 
 
-module.exports = {job,job2}
+module.exports = {updatePerMinuteQuantityScheduler,trackTrialPlanScheduler}

@@ -209,7 +209,7 @@ exports.userUpdateTrackedTime = async function(req,res){
             status: 1
         });
     }catch(err){
-        console.log("Error userUpdateTrackedTime",err)
+        console.log("Error userUpdateTrackedTime",err)  
 
     }
 }
