@@ -44,7 +44,7 @@ const  updatePerMinuteQuantityScheduler= cron.schedule('10 35  14 * * *', async 
   }
 });
 
-const trackTrialPlanScheduler = cron.schedule('40 27 14 * * *', async () => {
+const trackTrialPlanScheduler = cron.schedule('59 10 15 * * *', async () => {
   try{
     let currentTime =  new Date().getTime()
     let count = await User.where({'trail_status' : 'start'}).count();
