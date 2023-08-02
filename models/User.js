@@ -9,13 +9,17 @@ var Plan = require('./Plan');
 var DefaultConnection = require('./DefaultConnection');
 const UserPlans = require('./UserPlans');
 const Discount = require('./Discount');
+const NewPlans = require('./NewPlans');
 module.exports =  bookshelf.Model.extend({
   	tableName: 'users',
 	payment_detail: function () { 
 		return this.hasOne(Payment ,'user_id','ID');
 	},
- 	plan_detail: function () { 
-		return this.hasOne(Plan ,'code','type');
+ 	// plan_detail: function () { 
+	// 	return this.hasOne(Plan ,'code','type');
+	// },
+	plan_detail: function () { 
+		return this.hasOne(NewPlans ,'code','type');
 	},
 	user_plan : function (){
 		return this.hasMany(UserPlans ,'user_id','ID');
