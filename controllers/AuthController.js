@@ -784,6 +784,7 @@ exports.updateUserDetailsHook = async function(req,res){
             await User.where({'ID' : userDetails?.user_plan[0]?.user_id}).save({
                 'subscription_status' : 0
             },{patch: true })
+            io.emit("subscription-ended",{'userId': userDetails?.ID})
 
         }
         res.status(200).send({
