@@ -280,7 +280,7 @@ exports.register = async function (req, res) {
 /**get the user detail of logge din user*/
 exports.userDetail = async function (req, res) {
     var data = req.body
-    var user = await User.where({ 'ID': req.user.ID }).fetch({ withRelated: ['payment_detail', 'plan_detail','discount',{'user_plan': (qb) => {
+    var user = await User.where({ 'ID': req.user.ID }).fetch({ withRelated: ['default_connection','payment_detail', 'plan_detail','discount',{'user_plan': (qb) => {
         qb.where('is_active', true).limit(1);
     }}] });
     user = user.toJSON();
@@ -926,7 +926,7 @@ exports.registerWithPaidPlan = async function(req,res){
                 }
                 await newRegistrationEmail(response.user?.email,plan_detail?.plan_name)
                 res.status(200).send({
-                    message: "Registered and Subscribed Successfully.",
+                    message: userDetails?.userId ? "Subscribed Successfully" : "Registered and Subscribed Successfully.",
                     status: 1
                 });
             }else{
