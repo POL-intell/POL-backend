@@ -24,7 +24,7 @@ const NewPlans = require('../models/NewPlans');
 exports.plans = async function (req, res) {
     const count = await User.where({}).count()
     let plans;
-    if( count < 20){
+    if( count < 1000){
         plans = await NewPlans.where({}).fetchAll({ withRelated: [{'plans_pricing': (qb) => {
             qb.where('for_thousand', 1)
         }}] });
