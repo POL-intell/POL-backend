@@ -4,10 +4,10 @@ module.exports = {
     client: 'mysql',
     connection: {
       // hostname: 'localhost',
-      host: 'localhost',
+      host: 'pol-data.com',
       database: 'pol',
-      user: 'root',
-      password: 'testpassword',
+      user: 'roots',
+      password: 'roots@123',
       port: '3306'
     },
     pool: {
