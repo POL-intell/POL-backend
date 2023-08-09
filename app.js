@@ -11,14 +11,8 @@ const {updatePerMinuteQuantityScheduler,trackTrialPlanScheduler} = require('./cr
 
 const app = express();
 
-
-// app.use(cors());
-// const corsOptions = {
-//   origin: 'https://43b8-49-156-101-39.ngrok-free.app/',
-//   methods: ['GET', 'POST', 'PUT', 'DELETE'],
-// };
 const corsOptions = {
-  origin: 'https:/localhost:4200/',
+  origin: 'https://pol-bi.online/',
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
 };
 app.use(cors());
