@@ -298,7 +298,7 @@ exports.fetchUser = async function (req, res){
     res.status(200).send({
         message: "User Detail",
         status: 1,
-        forgot_password: user?.forgot_password
+        forgot_password: user.forgot_password
     });
 }
 

@@ -13,7 +13,7 @@ const sendForgotPasswordEmail = async (userEmail,randomString)=>{
         emailSubj = emailSubj.toJSON()
         let encryptedData = await encryptData(user_details.ID)
         if(encryptedData?.status){
-            let routeLink = `<a href=http://localhost:4200/forgot-pass/${encryptedData?.encryptedUserId}/${randomString}>Click Here</a>`
+            let routeLink = `<a href=https://pol-bi.online/#/forgot-pass/${encryptedData?.encryptedUserId}/${randomString}>Click Here</a>`
             let dataObj = {
                 fullName : user_details?.first_name + " "  + user_details?.surname,
                 userName : user_details?.username,
