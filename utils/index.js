@@ -7,7 +7,7 @@ const bcrypt = require('bcrypt');
 const registerUser = async (userDetails)=>{
     try{
         const count = await User.where({}).count()
-        const first_thousand = count < 20 ? 1 : 0
+        const first_thousand = count < 1000 ? 1 : 0
         const existusername = await User.where({ 'username': userDetails.username }).count();
         if (existusername > 0) {
             return{message: "Username is already registed.",status: false};
