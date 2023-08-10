@@ -778,12 +778,6 @@ exports.updateUserDetailsHook = async function(req,res){
             }).save(null, { method: 'insert' });
         }
 
-<<<<<<< HEAD
-       let getDateDifference = await getDateDiff(userDetails)
-       console.log("getDateDifference",getDateDifference)
-=======
-       
->>>>>>> fe9f3e2d676465084f78a716f2b068f633ac45af
         if((userDetails?.user_plan[0]?.cancel_plan === 1 || userDetails?.user_plan[0]?.renewal_plan === 0) && userDetails?.user_plan[0]?.subscription_id === subscription.id && !getDateDifference){
             await stripe.subscriptions.cancel(userDetails?.user_plan[0]?.subscription_id);
             await UserPlans.where({'user_id' : userDetails?.user_plan[0]?.user_id}).save({
