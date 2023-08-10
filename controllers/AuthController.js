@@ -730,7 +730,9 @@ exports.updateUserDetailsHook = async function(req,res){
 
         const per_app_item = subscription.items.data.find(item => item.price.id === userDetails?.user_plan[0]?.per_app_price_id);
         let per_minute_quantity = 0
-        if(userDetails?.user_plan[0]?.per_minute_price_id  !== null){
+        let getDateDifference = await getDateDiff(userDetails)
+        console.log("getDateDifference",getDateDifference)
+        if(userDetails?.user_plan[0]?.per_minute_price_id  !== null && !getDateDifference){
             const per_minute_item = subscription.items.data.find(item => item.price.id === userDetails.user_plan[0]?.per_minute_price_id);
             per_minute_quantity = per_minute_item?.quantity
             let data = await stripe.subscriptionItems.update(
@@ -776,8 +778,12 @@ exports.updateUserDetailsHook = async function(req,res){
             }).save(null, { method: 'insert' });
         }
 
+<<<<<<< HEAD
        let getDateDifference = await getDateDiff(userDetails)
        console.log("getDateDifference",getDateDifference)
+=======
+       
+>>>>>>> fe9f3e2d676465084f78a716f2b068f633ac45af
         if((userDetails?.user_plan[0]?.cancel_plan === 1 || userDetails?.user_plan[0]?.renewal_plan === 0) && userDetails?.user_plan[0]?.subscription_id === subscription.id && !getDateDifference){
             await stripe.subscriptions.cancel(userDetails?.user_plan[0]?.subscription_id);
             await UserPlans.where({'user_id' : userDetails?.user_plan[0]?.user_id}).save({
@@ -812,7 +818,7 @@ exports.registerWithTestPlan = async function(req,res){
                 message : response.message
             });
         }else{
-            let plan_detail = await Plan.where({ 'plan_name': userDetails.plan_name }).fetch();
+            let plan_detail = await NewPlans.where({ 'plan_name': userDetails.plan_name }).fetch();
             plan_detail = plan_detail.toJSON()
             await User.where({ 'ID': response.user.ID }).save({
                 'type': plan_detail.code,
