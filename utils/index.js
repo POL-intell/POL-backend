@@ -244,6 +244,16 @@ const generateRandomString = () => {
     });
   };
   
-  
 
-module.exports = {registerUser,hashPassword,checkDiscount,createAndUpdateCustomerStripe,updatePerAppQuantity,transporter,replaceEmailConstantsWithValues,isOneDayOrLessLeft,updatePerMinuteQuantity,delay,generateRandomString}
+
+const getDateDiff = async(userDetails)=>{
+    const currentDate = new Date();
+    const startingDate =  new Date(userDetails?.starting_date)
+    const formattedCurrentDate = `${currentDate.getFullYear()}-${(currentDate.getMonth() + 1).toString().padStart(2, '0')}-${currentDate.getDate().toString().padStart(2, '0')}`;
+    console.log("formattedCurrentDate",formattedCurrentDate , new Date(formattedCurrentDate).getTime()) 
+    const formattedStartingDate = `${currentDate.getFullYear()}-${(currentDate.getMonth() + 1).toString().padStart(2, '0')}-${currentDate.getDate().toString().padStart(2, '0')}`;
+    console.log("formattedStartingDate",formattedStartingDate,new Date(formattedStartingDate).getTime()) 
+    return (formattedCurrentDate == formattedStartingDate)
+}
+
+module.exports = {registerUser,hashPassword,checkDiscount,createAndUpdateCustomerStripe,updatePerAppQuantity,transporter,replaceEmailConstantsWithValues,isOneDayOrLessLeft,updatePerMinuteQuantity,delay,generateRandomString,getDateDiff}

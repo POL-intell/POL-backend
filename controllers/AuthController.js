@@ -14,7 +14,7 @@ var jwt = require('jsonwebtoken');
 const UserPlans = require('../models/UserPlans');
 const PlansForThousands = require("../models/Plans_for_thousands")
 const Discount = require('../models/Discount');
-const {registerUser,checkDiscount,createAndUpdateCustomerStripe,updatePerAppQuantity,hashPassword,generateRandomString}  = require("../utils/index")
+const {registerUser,checkDiscount,createAndUpdateCustomerStripe,updatePerAppQuantity,hashPassword,generateRandomString, getDateDiff}  = require("../utils/index")
 const {sendForgotPasswordEmail,newRegistrationEmail} = require("../services/EmalServices");
 const NewPlans = require('../models/NewPlans');
 
@@ -330,7 +330,7 @@ exports.saveFile = async function (req, res) {
             let per_app_price_id = user_data?.user_plan[0]?.per_app_price_id
             
             let data = {
-                subscripton_id:user_data.user_plan[0].subscription_id,
+                subscripton_id:user_data?.user_plan[0]?.subscription_id,
                 per_app_price_id: per_app_price_id, 
                 per_app_quantity: user_files_count
             }
@@ -694,7 +694,7 @@ async function getUserData(id) {
     try{
         let user = await User.where({ 'ID': id }).fetch({ withRelated: ['payment_detail', 'plan_detail', 'default_connection',{
             'user_plan': (qb) => {
-              qb.where('is_active', true).limit(1);
+              qb.where('is_active', 1).limit(1);
             }
         }] });
         user = user.toJSON();
@@ -776,7 +776,9 @@ exports.updateUserDetailsHook = async function(req,res){
             }).save(null, { method: 'insert' });
         }
 
-        if((userDetails?.user_plan[0]?.cancel_plan === 1 || userDetails?.user_plan[0]?.renewal_plan === 0) && userDetails?.user_plan[0]?.subscription_id === subscription.id ){
+       let getDateDiff = await getDateDiff()
+       console.log("getDateDiff",getDateDiff)
+        if((userDetails?.user_plan[0]?.cancel_plan === 1 || userDetails?.user_plan[0]?.renewal_plan === 0) && userDetails?.user_plan[0]?.subscription_id === subscription.id && !getDateDiff){
             await stripe.subscriptions.cancel(userDetails?.user_plan[0]?.subscription_id);
             await UserPlans.where({'user_id' : userDetails?.user_plan[0]?.user_id}).save({
                 'is_active' : 0,
