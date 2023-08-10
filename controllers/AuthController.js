@@ -778,7 +778,6 @@ exports.updateUserDetailsHook = async function(req,res){
             }).save(null, { method: 'insert' });
         }
 
-       
         if((userDetails?.user_plan[0]?.cancel_plan === 1 || userDetails?.user_plan[0]?.renewal_plan === 0) && userDetails?.user_plan[0]?.subscription_id === subscription.id && !getDateDifference){
             await stripe.subscriptions.cancel(userDetails?.user_plan[0]?.subscription_id);
             await UserPlans.where({'user_id' : userDetails?.user_plan[0]?.user_id}).save({
@@ -914,7 +913,6 @@ exports.registerWithPaidPlan = async function(req,res){
                     let user_plan_obj = {
                         'user_id': response.user.ID,
                         'subscription_id': subscription.id,
-                        'amount_paid':amount_paid,
                         'is_active': 1,
                         'plan_type':userDetails.plan_term,
                         'plan_id':plan_detail?.id,
