@@ -717,6 +717,7 @@ exports.updateSubscriptionType=  async function(req,res){
     });
 }
 
+// function executes when stripe webhook called (webhook called when an invoice paid)
 exports.updateUserDetailsHook = async function(req,res){
     try{
         const {object} = req.body.data
@@ -802,6 +803,7 @@ exports.updateUserDetailsHook = async function(req,res){
     }
 }
 
+// function executes when registered and subscribe for test  plan
 exports.registerWithTestPlan = async function(req,res){
     try{
         let userDetails = req.body
@@ -831,6 +833,7 @@ exports.registerWithTestPlan = async function(req,res){
     }
 }
 
+// function executes when registered and subscribe for paid  plan
 exports.registerWithPaidPlan = async function(req,res){
     try{
         let userDetails = req.body
@@ -946,6 +949,7 @@ exports.registerWithPaidPlan = async function(req,res){
     }
 }
 
+// function executes to send a recover password link to user
 exports.sendForgotPassLink = async function(req,res){
     try{
         const data = req.body
@@ -983,6 +987,7 @@ exports.sendForgotPassLink = async function(req,res){
     }
 }
 
+// function executes to recover user password
 exports.forgotPassword = async function(req,res){
     try{
         const {new_password , confirm_new_password, userId} = req.body
@@ -1020,12 +1025,12 @@ exports.forgotPassword = async function(req,res){
     }
 }
 
+// function executes to update users accoutn details 
 exports.updateAccountDetails = async function(req,res){
     try{
         const userDetails = req.body
         let user_data = await User.where({'ID':userDetails.ID}).fetch()
         user_data = user_data.toJSON()
-        
         const existusername = await User.where({ 'username': userDetails.username }).count();
         const existEmail = await User.where({ email: userDetails.email }).count();
         if (existusername > 0 && user_data.username !== userDetails.username) {
@@ -1060,8 +1065,6 @@ exports.updateAccountDetails = async function(req,res){
                 status: 1
             });
         }
-        
-
     }catch(err){
         console.log("Error in updateAccountDetails",err)
         res.status(200).send({  
@@ -1071,6 +1074,7 @@ exports.updateAccountDetails = async function(req,res){
     }
 }
 
+// function executes to recover cancel users subscription 
 exports.cancelSubscription = async function(req,res){
     try{
         const data = req.body
