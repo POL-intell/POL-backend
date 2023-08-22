@@ -70,7 +70,8 @@ exports.userAdd = async function (req, res) {
             'plain_password': data.password,
             'auto_renewal': data.auto_renewal,
             'type': data.type,
-            'span': data.span
+            'span': data.span,
+            'country_code':data.code
         })
             .save(null, { method: 'insert' });
 
