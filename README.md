@@ -28,3 +28,24 @@ For local you can use npm , yarn etc.
 After that use npm or yarn to start server on local.
 Go to root directory :-
         Using npm:- npm start
+
+### Sample knexfile
+module.exports = {
+  development: {
+    client: '',
+    connection: {
+      hostname: '',
+      host: '',
+      database: '',
+      user: '',
+      password: '',
+      port: ''
+    },
+    pool: {
+      min: 0,
+    },
+    migrations: {
+      tableName: 'migrations'
+    }
+  },
+}

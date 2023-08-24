@@ -41,6 +41,8 @@ exports.usersList = async function (req, res) {
 /** Create new user */
 exports.userAdd = async function (req, res) {
     var data = req.body
+    console.log("data",data)
+    // return;
     var existusername = await User.where({ 'username': data.username }).count();
     if (existusername > 0) {
         res.status(200).send({
@@ -71,7 +73,9 @@ exports.userAdd = async function (req, res) {
             'auto_renewal': data.auto_renewal,
             'type': data.type,
             'span': data.span,
-            'country_code':data.code
+            'country_code':data.code,
+            'by_admin':1,
+            'subscription_status':1
         })
             .save(null, { method: 'insert' });
 
