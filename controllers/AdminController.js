@@ -41,6 +41,8 @@ exports.usersList = async function (req, res) {
 /** Create new user */
 exports.userAdd = async function (req, res) {
     var data = req.body
+    console.log("data",data)
+    // return;
     var existusername = await User.where({ 'username': data.username }).count();
     if (existusername > 0) {
         res.status(200).send({
