@@ -628,16 +628,26 @@ exports.savedefaultConnection = async function (req, res) {
         }
     }
 
-    var folder = await new DefaultConnection({
-        'connection': data.connection,
+    console.log(data.connection);
+    var msg = 'Default Connection has been saved';
+    if(data.connection.db_id){
+        await DefaultConnection.where({ 'id': data.connection.db_id }).save({
+            'connection': JSON.stringify(data.connection),
 
-        'user_id': req.user.ID,
+        }, { patch: true });
+         msg = 'Connection" already saved as default!';
+ 
+    }else{
+        var folder = await new DefaultConnection({
+            'connection': data.connection,
 
-    })
-        .save(null, { method: 'insert' });
+            'user_id': req.user.ID,
+
+        }).save(null, { method: 'insert' });
+    }
     var cons = await DefaultConnection.where({ 'user_id': req.user.ID }).fetchAll();
     res.status(200).send({
-        message: "Default Connection has been saved",
+        message: msg,
         status: 1,
         connections: cons.toJSON()
     });

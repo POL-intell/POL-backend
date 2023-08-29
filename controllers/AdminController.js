@@ -71,7 +71,9 @@ exports.userAdd = async function (req, res) {
             'auto_renewal': data.auto_renewal,
             'type': data.type,
             'span': data.span,
-            'country_code':data.code
+            'country_code':data.code,
+            'by_admin':1,
+            'subscription_status':1
         })
             .save(null, { method: 'insert' });
 
