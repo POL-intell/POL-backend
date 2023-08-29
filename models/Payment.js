@@ -9,7 +9,7 @@ var Plan = require('./Plan');
 
 module.exports =  bookshelf.Model.extend({
   	tableName: 'payments'  ,
- plan_detail: function () { 
+ 	plan_detail: function () { 
 		return this.hasOne(Plan ,'id','plan_id');
 	},
 });

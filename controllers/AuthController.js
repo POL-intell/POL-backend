@@ -8,16 +8,31 @@ var UserFile = require('../models/UserFile');
 var Folder = require('../models/Folder');
 var Temp = require('../models/Temp');
 var DefaultConnection = require('../models/DefaultConnection');
-const stripe = require('stripe')('sk_test_51ImKQbAMjNDVHKZlXycRU5zEeZlyZW7HHL25yLBenlFeKrkiuiM3Xgje8XAYnKpbaa7i2gLSU0p6XgX5gIQlCADD00F60in1Rw');
+const stripe = require('stripe')(process.env.TEST_STRIPE_KEY);
 const bcrypt = require('bcrypt');
 var jwt = require('jsonwebtoken');
+const UserPlans = require('../models/UserPlans');
+const PlansForThousands = require("../models/Plans_for_thousands")
+const Discount = require('../models/Discount');
+const {registerUser,checkDiscount,createAndUpdateCustomerStripe,updatePerAppQuantity,hashPassword,generateRandomString, getDateDiff}  = require("../utils/index")
+const {sendForgotPasswordEmail,newRegistrationEmail} = require("../services/EmalServices");
+const NewPlans = require('../models/NewPlans');
 
-const saltRounds = 10;
-
+// const saltRounds = 10;
 
 /**get all the plans list and their details*/
 exports.plans = async function (req, res) {
-    var plans = await Plan.where({}).fetchAll();
+    const count = await User.where({}).count()
+    let plans;
+    if( count < 1000){
+        plans = await NewPlans.where({}).fetchAll({ withRelated: [{'plans_pricing': (qb) => {
+            qb.where('for_thousand', 1)
+        }}] });
+    }else{
+        plans = await NewPlans.where({}).fetchAll({ withRelated: [{'plans_pricing': (qb) => {
+            qb.where('for_thousand', 0)
+        }}] });
+    }
     res.status(200).send({
         message: "Plan list",
         status: 1,
@@ -26,145 +41,181 @@ exports.plans = async function (req, res) {
 }
 
 
+exports.plansForPricing = async function (req, res) {
+    let {activeTab} = req.params
+    let plans;
+    if( activeTab === "1"){
+        plans = await NewPlans.where({}).fetchAll({ withRelated: [{'plans_pricing': (qb) => {
+            qb.where('for_thousand', 1)
+        }}] });
+    }else{
+        plans = await NewPlans.where({}).fetchAll({ withRelated: [{'plans_pricing': (qb) => {
+            qb.where('for_thousand', 0)
+        }}] });
+    }
+  
+    res.status(200).send({
+        message: "Plan list",
+        status: 1,
+        data: plans.toJSON()
+    });
+}
+
 /**login to pol bu username and password*/
 exports.login = async function (req, res) {
-    var data = req.body
-    var exist = await User.where({ 'username': data.username }).count();
-    if (exist == 0) {
-        res.status(200).send({
-            message: "Wrong credentials.",
-            status: 0
-        });
-    }
-    var user = await User.where({ 'username': data.username }).fetch();
-    user = user.toJSON();
-    bcrypt.compare(data.password, user.password, async function (err, result) {
-        if (result) {
-            var jwtToken = jwt.sign({ email: user.email, ID: user.ID }, 'RESTFULAPIs', { expiresIn: '60d' });
-            var user_detail = await getUserData(user.ID);
+    try{
+        var data = req.body
+        var exist = await User.where({ 'username': data.username }).count();
+        if (exist === 0) {
             res.status(200).send({
-                message: "Login Successfull.",
-                status: 1,
-                token: jwtToken,
-                user_type: user.user_type,
-                subscription: user.span,
-                subscription_status: 1,
-                user_detail: user_detail
-            });
-        } else {
-            res.status(200).send({
-                message: "Wrong credentials.",
+                message: "User doesn't exist with this username.",
                 status: 0
             });
+        }else{
+            var user = await User.where({ 'username': data.username }).fetch();
+            user = user.toJSON();
+            bcrypt.compare(data.password, user.password, async function (err, result) {
+                if(err){
+                    res.status(200).send({
+                        message: "Wrong credentials.",
+                        status: 0,
+                        user : user
+                    });
+                }
+                if (result) {
+                    var jwtToken = jwt.sign({ email: user.email, ID: user.ID }, 'RESTFULAPIs', { expiresIn: '60d' });
+                    var user_detail = await getUserData(user.ID);
+                    res.status(200).send({
+                        message: "Login Successfull.",
+                        status: 1,
+                        token: jwtToken,
+                        user_type: user.user_type,
+                        subscription: user.span,
+                        subscription_status: user_detail.subscription_status,
+                        user_detail: user_detail,
+                        trail_status:user_detail.trail_status
+                    });
+                } else {
+                    res.status(200).send({
+                        message: "Wrong credentials.",
+                        status: 0,
+                        user : user
+                    });
+                }
+            });
         }
-    });
-
+    }catch(err){
+        console.log("Error in login",err)
+    }
 }
 
 
 /**Susbcribe to one plan to user*/
 exports.subscribe = async function (req, res) {
-
-    var data = req.body
-
-    var user = await User.where({ 'ID': req.user.ID }).fetch();
-    user = user.toJSON();
-
-    if (data.subscription_type == 'trail') {
-        //update user table
-        await User.where({ 'ID': req.user.ID }).save({
-            'type': '',
-            'span': 'T'
-        }, { patch: true });
-
-        res.status(200).send({
-            message: "Subscribed Successfully ",
-            status: 1
-        });
-        return
-    }
-
-    var plan_detail = await Plan.where({ 'id': data.plan_id }).fetch();
-    plan_detail = plan_detail.toJSON();
-    var price = 0;
-    var interval = 'year';
-    if (data.term == 'monthly') {
-        price = plan_detail.monthly_per_app
-        interval = 'month'
-    } else {
-        price = plan_detail.yearly_per_app
-    }
-    //create customer
-    const customer = await stripe.customers.create({
-        source: req.body.token.id,
-        description: 'By username : ' + user.username,
-        name: data.first_name,
-        email: data.email
-    });
-
-    const product = await stripe.products.create({
-        name: plan_detail.plan_name + ' (' + interval + ')',
-    });
-
-    //create price
-    const prices = await stripe.prices.create({
-        unit_amount: price * 100,
-        currency: 'usd',
-        recurring: { interval: interval },
-        product: product.id,
-    });
-
-
-
-    stripe.subscriptions.create({
-        customer: customer.id,
-        items: [
-            { price: prices.id },
-        ],
-
-    }, async (err, charge) => {
-
-
-        if (err) {
-            res.status(200).send({
-                message: err,
-                status: 0
-            });
-        } else {
-
-            var plan = Plan.where({ id: data.plan_id }).fecth();
-            plan = plan.toJSON();
-
-
+    try{
+        let customerId = ''
+        const data = req.body
+        let user = await User.where({ 'ID': req.user.ID }).fetch();
+        user = user.toJSON();
+        
+        let plan_detail = await Plan.where({ 'plan_name': data.plan_name }).fetch();
+        plan_detail = plan_detail.toJSON();
+        if (data.subscription_type == 'trail') {
             //update user table
-            await User.where({ 'ID': req.user.ID }).save({
-                'type': plan.code,
-                'subscription_status': 1
+            let data = await User.where({ 'ID': req.user.ID }).save({
+                'type': plan_detail.code,
+                'span': 'T',
+                'trial_start_date': new Date(),	
+                'is_trial_start':1
             }, { patch: true });
-
-            //save payment infor into  table
-            await new Payment({
-                'user_id': user.id,
-                'transaction_id': charge.id,
-                'amount': price,
-                'currency': charge.currency,
-                'paid_status': 0,
-                'status': 0,
-                'receipt_url': charge.items.url,
-                'plan_id': data.plan_id,
-                'plan_term': data.plan_term
-
-            }).save(null, { method: 'insert' });
-
             res.status(200).send({
-                message: "Payment Successfull",
+                message: "Subscribed Successfully ",
                 status: 1
             });
+            return
         }
-    })
 
+        if(user.customer_id === null){
+            const customer = await stripe.customers.create({
+                source: req.body.token.id,
+                description: 'By username : ' + user.username,
+                name: data.first_name,
+                email: data.email
+            }); 
+            if(customer){
+                customerId = customer.id
+                await User.where({ 'ID': req.user.ID }).save({
+                    'customer_id': customer.id,
+                }, { patch: true });
+            }
+        }else{
+            customerId = user.customer_id
+        }
+        //create customer
+        if(customerId){
+            const monthly_price_id = plan_detail.monthly_price_id
+            const monthly_per_minute_price_id = plan_detail.monthly_per_minute_price_id
+            const subscription = await stripe.subscriptions.create({
+                customer: customerId,
+                items: [
+                    { 
+                        price: monthly_price_id, 
+                        quantity: 5
+                    },
+                    {
+                        price:monthly_per_minute_price_id,
+                        quantity:0
+                    }
+                ],
+        
+            }, async (err, charge) => {
+        
+        
+                if (err) {
+                    res.status(200).send({
+                        message: err,
+                        status: 0
+                    });
+                } else {
+                    //update user table
+                    await User.where({ 'ID': req.user.ID }).save({
+                        'type': plan_detail.code,
+                        'subscription_status': 1
+                    }, { patch: true });
+        
+                    //save payment infor into  table
+                    let price = 0;
+                    if (data.term == 'monthly') {
+                        price = plan_detail.monthly_per_app
+                    } else {
+                        price = plan_detail.yearly_per_app
+                    }
+                    await new Payment({
+                        'user_id': req.user.ID,
+                        'transaction_id': charge.id,
+                        'amount': price,
+                        'currency': charge.currency,
+                        'paid_status': 0,
+                        'status': 0,
+                        'receipt_url': charge.items.url,
+                        'plan_id': data.plan_id,
+                        'plan_term': data.plan_term
+        
+                    }).save(null, { method: 'insert' });
+        
+                    res.status(200).send({
+                        message: "Payment Successfull",
+                        status: 1
+                    });
+                }
+            })
+        }
+            
+    }catch(err){
+        console.log("this is error ", err)
+    }
+   
 }
-
 
 /**registe ruser in pol */
 exports.register = async function (req, res) {
@@ -207,15 +258,16 @@ exports.register = async function (req, res) {
     }
 
     bcrypt.hash(data.password, saltRounds, async function (err, hash) {
-        var user = await new User({
+        let phoneNumber = data.code + '-' + data.phone
+        const user = await new User({
             'username': data.username,
             'password': hash,
             'first_name': data.name,
             'email': data.email,
-            'mobile': data.phone,
-            'surname': data.family_name
-        })
-            .save(null, { method: 'insert' });
+            'mobile': phoneNumber,
+            'surname': data.family_name,
+            'plain_password':data.password
+        }).save();
 
         res.status(200).send({
             message: "Register Successfull",
@@ -227,15 +279,26 @@ exports.register = async function (req, res) {
 
 /**get the user detail of logge din user*/
 exports.userDetail = async function (req, res) {
-
     var data = req.body
-    var user = await User.where({ 'ID': req.user.ID }).fetch({ withRelated: ['payment_detail', 'plan_detail'] });
+    var user = await User.where({ 'ID': req.user.ID }).fetch({ withRelated: ['default_connection','payment_detail', 'plan_detail','discount',{'user_plan': (qb) => {
+        qb.where('is_active', true).limit(1);
+    }}] });
     user = user.toJSON();
-    console.log(user)
     res.status(200).send({
         message: "User Detail",
         status: 1,
         data: user
+    });
+}
+
+exports.fetchUser = async function (req, res){
+    let {userId} = req.params
+    var user = await User.where({ 'ID': userId }).fetch();
+    user = user.toJSON();
+    res.status(200).send({
+        message: "User Detail",
+        status: 1,
+        forgot_password: user.forgot_password
     });
 }
 
@@ -256,18 +319,34 @@ exports.saveFile = async function (req, res) {
 
         })
             .save(null, { method: 'insert' });
-
+        
         var existTemp = await Temp.where({ 'user_id': req.user.ID }).count();
         if (existTemp > 0) {
             await Temp.where({ 'user_id': req.user.ID }).destroy();
         }
-
-
-        res.status(200).send({
-            message: "FIle saved Successfully ",
-            status: 1,
-            data: user
-        });
+        let user_files_count =  await UserFile.where({'user_id': req.user.ID }).count();
+        if(user_files_count > 5){
+            let user_data = await getUserData(req.user.ID)
+            let per_app_price_id = user_data?.user_plan[0]?.per_app_price_id
+            
+            let data = {
+                subscripton_id:user_data?.user_plan[0]?.subscription_id,
+                per_app_price_id: per_app_price_id, 
+                per_app_quantity: user_files_count
+            }
+            await updatePerAppQuantity(data)
+            res.status(200).send({
+                message: "File saved Successfully ",
+                status: 1,
+                data: user
+            });
+        }else{
+            res.status(200).send({
+                message: "File saved Successfully ",
+                status: 1,
+                data: user
+            });
+        }
         return
     } else {
 
@@ -317,7 +396,7 @@ exports.getuserFiles = async function (req, res) {
 
 /**To save folder according to parnet folder of a user*/
 exports.saveFolder = async function (req, res) {
-
+    yearly_price_id
     var data = req.body
 
     var folder = await new Folder({
@@ -354,7 +433,6 @@ exports.mainFolders = async function (req, res) {
 async function getFolderRoute(folder_id) {
 
     var is_folder = await Folder.where({ 'id': folder_id }).count();
-    console.log(is_folder)
     if (is_folder == 0) {
         return [];
     }
@@ -363,12 +441,10 @@ async function getFolderRoute(folder_id) {
     folder = folder.toJSON()
     var parent_id = folder.parent_folder_id
     arr.push(folder.folder_name)
-    console.log(arr);
     var is_next = true
     if (parent_id > 0) {
         while (is_next == true) {
             var has = await Folder.where({ 'id': parent_id }).count();
-            console.log(has, 'has')
             if (has > 0) {
                 var folder = await Folder.where({ 'id': parent_id }).fetch();
                 folder = folder.toJSON()
@@ -382,7 +458,6 @@ async function getFolderRoute(folder_id) {
             }
         }
     }
-    console.log(arr);
     return arr;
 }
 
@@ -545,7 +620,6 @@ exports.savedefaultConnection = async function (req, res) {
     var exist = await DefaultConnection.where({ 'user_id': req.user.ID }).count();
 
     var data = req.body
-    console.log(data)
 
     if (exist > 0) {
         var user = await getUserData(req.user.ID);
@@ -554,16 +628,26 @@ exports.savedefaultConnection = async function (req, res) {
         }
     }
 
-    var folder = await new DefaultConnection({
-        'connection': data.connection,
+    console.log(data.connection);
+    var msg = 'Default Connection has been saved';
+    if(data.connection.db_id){
+        await DefaultConnection.where({ 'id': data.connection.db_id }).save({
+            'connection': JSON.stringify(data.connection),
 
-        'user_id': req.user.ID,
+        }, { patch: true });
+         msg = 'Connection" already saved as default!';
+ 
+    }else{
+        var folder = await new DefaultConnection({
+            'connection': data.connection,
 
-    })
-        .save(null, { method: 'insert' });
+            'user_id': req.user.ID,
+
+        }).save(null, { method: 'insert' });
+    }
     var cons = await DefaultConnection.where({ 'user_id': req.user.ID }).fetchAll();
     res.status(200).send({
-        message: "Default Connection has been saved",
+        message: msg,
         status: 1,
         connections: cons.toJSON()
     });
@@ -572,7 +656,6 @@ exports.savedefaultConnection = async function (req, res) {
 exports.update_default_connection = async function (req, res) {
 
     var data = req.body
-    console.log(data)
 
     var exist = await DefaultConnection.where({ 'id': data.connection.db_id }).count();
 
@@ -598,11 +681,8 @@ exports.update_default_connection = async function (req, res) {
 exports.delete_default_connection = async function (req, res) {
 
     var data = req.body
-    console.log(data)
 
     var exist = await DefaultConnection.where({ 'id': data.connection.db_id }).count();
-
-   
 
     if (exist > 0) {
         await DefaultConnection.where({ 'id': data.connection.db_id }).destroy();
@@ -620,9 +700,407 @@ exports.delete_default_connection = async function (req, res) {
 
 /**Get the user data bu user id*/
 async function getUserData(id) {
+   
+    try{
+        let user = await User.where({ 'ID': id }).fetch({ withRelated: ['payment_detail', 'plan_detail', 'default_connection',{
+            'user_plan': (qb) => {
+              qb.where('is_active', 1).limit(1);
+            }
+        }] });
+        user = user.toJSON();
+        return user;
+    }catch(err){
+        console.log("Error in getUserDetails",err)
+    }
+    
+}
 
-    var user = await User.where({ 'ID': id }).fetch({ withRelated: ['payment_detail', 'plan_detail', 'default_connection'] });
-    user = user.toJSON();
-    console.log('user', user)
-    return user;
+exports.updateSubscriptionType=  async function(req,res){
+    let data = req.body
+    await User.where({ 'ID': req.user.ID }).save({
+        'trail_status': data.trail_status,
+        'trail_end_date': new Date(),
+    }, { patch: true });
+    res.status(200).send({
+        message: "Updated Successfully",
+        status: 1,
+    });
+}
+
+// function executes when stripe webhook called (webhook called when an invoice paid)
+exports.updateUserDetailsHook = async function(req,res){
+    try{
+        const {object} = req.body.data
+        let userDetails = await User.where({'customer_id': object.customer}).fetch({ withRelated: ['plan_detail',{'user_plan': (qb) => {
+            qb.where('is_active', true).limit(1);
+          }}] });
+        userDetails = userDetails.toJSON();
+        const subscription = await stripe.subscriptions.retrieve(
+            object.subscription
+        );
+
+        const per_app_item = subscription.items.data.find(item => item.price.id === userDetails?.user_plan[0]?.per_app_price_id);
+        let per_minute_quantity = 0
+        let getDateDifference = await getDateDiff(userDetails)
+        console.log("getDateDifference",getDateDifference)
+        if(userDetails?.user_plan[0]?.per_minute_price_id  !== null && !getDateDifference){
+            const per_minute_item = subscription.items.data.find(item => item.price.id === userDetails.user_plan[0]?.per_minute_price_id);
+            per_minute_quantity = per_minute_item?.quantity
+            let data = await stripe.subscriptionItems.update(
+                per_minute_item.id,
+                {
+                    quantity : 0,
+                    proration_behavior: 'none'
+                }
+            );
+        }
+        
+        try{
+            await User.where({ 'ID': userDetails?.ID }).save({
+                "last_charge" : new Date(),
+                "used" : 0
+            }, { patch: true });
+            let amount_paid = object.amount_paid/100
+            await new Payment({
+                'user_id': userDetails.ID,
+                'transaction_id': object.subscription,
+                'amount': amount_paid,
+                'currency': object.currency,
+                'paid_status': object.paid,
+                'status': object.status,
+                'receipt_url': object.invoice_pdf,
+                'per_app_quantity': per_app_item.quantity,
+                'per_minute_quantity': per_minute_quantity
+
+            }).save(null, { method: 'insert' });
+        }catch{
+            let amount_paid = object.amount_paid/100
+            await new Payment({
+                'user_id': userDetails.ID,
+                'transaction_id': object.subscription,
+                'amount': amount_paid,
+                'currency': object.currency,
+                'paid_status': object.paid,
+                'status': object.status,
+                'receipt_url': object.invoice_pdf,
+                'per_app_quantity': per_app_item.quantity,
+                'per_minute_quantity':per_minute_quantity
+
+            }).save(null, { method: 'insert' });
+        }
+
+        if((userDetails?.user_plan[0]?.cancel_plan === 1 || userDetails?.user_plan[0]?.renewal_plan === 0) && userDetails?.user_plan[0]?.subscription_id === subscription.id && !getDateDifference){
+            await stripe.subscriptions.cancel(userDetails?.user_plan[0]?.subscription_id);
+            await UserPlans.where({'user_id' : userDetails?.user_plan[0]?.user_id}).save({
+                'is_active' : 0,
+            },{patch: true })
+            await User.where({'ID' : userDetails?.user_plan[0]?.user_id}).save({
+                'subscription_status' : 0
+            },{patch: true })
+            io.emit("subscription-ended",{'userId': userDetails?.ID})
+
+        }
+        res.status(200).send({
+            message: "Updated Successfully.",
+            status: 1,
+        });
+    }catch(err){
+        console.log("Error in updateUserDetailsHook",err)
+        res.status(200).send({
+            message: "Something went wrong.",
+            status: 1,
+        });
+    }
+}
+
+// function executes when registered and subscribe for test  plan
+exports.registerWithTestPlan = async function(req,res){
+    try{
+        let userDetails = req.body
+        const response = await registerUser(userDetails)
+        if(response && response.status === false){
+            res.status(200).send({
+                status: 0,
+                message : response.message
+            });
+        }else{
+            let plan_detail = await NewPlans.where({ 'plan_name': userDetails.plan_name }).fetch();
+            plan_detail = plan_detail.toJSON()
+            await User.where({ 'ID': response.user.ID }).save({
+                'type': plan_detail.code,
+                'span': 'T',
+                'trail_start_date': new Date(),	
+                'trail_status': "start"
+            }, { patch: true });
+            res.status(200).send({
+                message: "Registered and Subscribed Successfully.",
+                status: 1,
+                subscription_status : 0
+            });
+        }
+    }catch(err){
+        console.log("Error in registerWithTestPlan",err)
+    }
+}
+
+// function executes when registered and subscribe for paid  plan
+exports.registerWithPaidPlan = async function(req,res){
+    try{
+        let userDetails = req.body
+        const stripeToken = req.body?.token?.id
+        const card_src = req.body.token.card.id
+        const renewal_plan = userDetails?.renewal === true ? 1 : 0
+        let response = {}
+        if(userDetails?.userId){
+            let user = await User.where({'ID':userDetails.userId}).fetch()
+            user = user.toJSON()
+            response={
+                status : true,
+                user:  user
+            }
+        }else{
+            response = await registerUser(userDetails)
+        }
+        if(response && response.status === false){
+            res.status(200).send({
+                status: 0,
+                message : response.message
+            });
+        }else{
+            let plan_detail;
+            if(response?.user?.first_thousand === 1){
+                plan_detail = await NewPlans.where({'plan_name' : userDetails?.plan_name}).fetch({ withRelated: [{'plans_pricing': (qb) => {
+                    qb.where('for_thousand', 1)
+                }}] });
+            }else{
+                plan_detail = await NewPlans.where({'plan_name' : userDetails?.plan_name}).fetch({ withRelated: [{'plans_pricing': (qb) => {
+                    qb.where('for_thousand', 0)
+                }}] });
+            }
+            plan_detail = plan_detail.toJSON()
+            let per_minute_price_id = plan_detail?.plans_pricing[0]?.per_minute_price_id
+
+            let per_app_price_id = userDetails.plan_term === 'monthly' ? plan_detail?.plans_pricing[0]?.monthly_price_id : plan_detail?.plans_pricing[0]?.yearly_price_id
+
+            let amount_paid = userDetails.plan_term === 'monthly' ? parseInt(plan_detail?.plans_pricing[0]?.monthly_per_app * 5) : parseInt(plan_detail?.plans_pricing[0]?.yearly_per_app * 5)
+            let span = userDetails.plan_term === 'monthly' ? 'M' : 'A'
+            
+            const isDiscount = await checkDiscount(response.user) 
+            const customer = await createAndUpdateCustomerStripe(response.user,isDiscount,stripeToken,card_src,amount_paid)
+            if(customer.status){
+                let subscription;
+                if(per_minute_price_id === null){
+                    subscription = await stripe.subscriptions.create({
+                        customer: customer.customerId,
+                        items: [
+                            { 
+                                price: per_app_price_id, 
+                                quantity: 5
+                            },
+                        ],
+                
+                    })
+                }else{
+                    subscription = await stripe.subscriptions.create({
+                        customer: customer.customerId,
+                        items: [
+                            { 
+                                price: per_app_price_id, 
+                                quantity: 5
+                            },
+                            {
+                                price:per_minute_price_id,
+                                quantity:0
+                            }
+                        ],
+                
+                    })
+                }
+                if(subscription && subscription?.id){
+                    await User.where({ 'ID': response.user.ID }).save({
+                        'type': plan_detail?.code,
+                        'span' : span,
+                        'subscription_status': 1
+                    }, { patch: true });
+               
+                    let user_plan_obj = {
+                        'user_id': response.user.ID,
+                        'subscription_id': subscription.id,
+                        'is_active': 1,
+                        'plan_type':userDetails.plan_term,
+                        'plan_id':plan_detail?.id,
+                        'per_app_price_id': per_app_price_id,
+                        'per_minute_price_id':per_minute_price_id,
+                        'renewal_plan':renewal_plan
+                    }
+                    if(isDiscount.status){
+                        user_plan_obj['coupon_id'] = isDiscount.coupon.coupon_code
+                    }
+                    await new UserPlans(user_plan_obj).save(null, { method: 'insert' });
+                }
+                await newRegistrationEmail(response.user?.email,plan_detail?.plan_name)
+                res.status(200).send({
+                    message: userDetails?.userId ? "Subscribed Successfully" : "Registered and Subscribed Successfully.",
+                    status: 1
+                });
+            }else{
+                res.status(200).send({
+                    message: "Something went wrong.",
+                    status: 0
+                });
+            }
+        }
+    }catch(err){
+        console.log("Error in registerWithPaidPlan",err)
+        res.status(200).send({
+            message: "Something went wrong.",
+            status: 0
+        });
+    }
+}
+
+// function executes to send a recover password link to user
+exports.sendForgotPassLink = async function(req,res){
+    try{
+        const data = req.body
+            let count = await User.where({'email':data.recovery_email}).count()
+            if(count === 0){
+                res.status(200).send({  
+                    message: "Invalid email",
+                    status: 1
+                });
+            }else{
+                const randomString = await generateRandomString()
+                let sendLink = await sendForgotPasswordEmail(data.recovery_email,randomString)
+                if(sendLink?.status){
+                    await User.where({'email':data.recovery_email}).save({
+                        'forgot_password' : randomString
+                    },{patch:true})
+                    res.status(200).send({  
+                        message: " Password recovery link has been sent to your email.",
+                        status: 1
+                    });
+                }else{
+                    res.status(200).send({  
+                        message: "Something went wrong.",
+                        status: 0
+                    });
+                }
+            }
+      
+    }catch(err){
+        console.log("Error in sendForgotPassLink",err)
+        res.status(200).send({  
+            message: "Something went wrong.",
+            status: 0
+        });
+    }
+}
+
+// function executes to recover user password
+exports.forgotPassword = async function(req,res){
+    try{
+        const {new_password , confirm_new_password, userId} = req.body
+        let user = await User.where({'ID':userId}).fetch()
+        user = user.toJSON()
+        if(user?.forgot_password == 0){
+            res.status(200).send({message: "Link is exipred.",status: false});
+        }else{
+            if (new_password.length < 6 ) {
+                res.status(200).send({message:"Password should be of at least 6 digit!",status: false});
+            }
+            if (new_password != confirm_new_password) {
+                res.status(200).send({message: "Password and confirm password don't matched.",status: false});
+            }else{
+                const hash = await hashPassword(new_password, 10);
+                const randomString = await generateRandomString()
+                await User.where({ 'ID': userId }).save({
+                    'password': hash,
+                    'plain_password':new_password,
+                    'forgot_password' : randomString
+                }, { patch: true });
+                // await sendForgotPasswordEmail(userName)
+                res.status(200).send({  
+                    message: "Password Changed Successfully.",
+                    status: 1
+                });
+            }
+        }
+    }catch(err){
+        console.log("Error in forgotPassword",err)
+        res.status(200).send({  
+            message: "Something went wrong.",
+            status: 0
+        });
+    }
+}
+
+// function executes to update users accoutn details 
+exports.updateAccountDetails = async function(req,res){
+    try{
+        const userDetails = req.body
+        let user_data = await User.where({'ID':userDetails.ID}).fetch()
+        user_data = user_data.toJSON()
+        const existusername = await User.where({ 'username': userDetails.username }).count();
+        const existEmail = await User.where({ email: userDetails.email }).count();
+        if (existusername > 0 && user_data.username !== userDetails.username) {
+            res.status(200).send({  
+                message: 'Username is already registed.',status: 0
+            });
+        }else if(existEmail > 0 && user_data.email !== userDetails.email)  {
+            res.status(200).send({  
+                message: 'Email  is already registered.',status: 0
+            });
+        }else if (userDetails.username !== userDetails.confirm_username) {
+            res.status(200).send({  
+                message: "username and confirm username don't matched.",status: 0
+            });
+        }else if(userDetails.password.length < 6){
+                res.status(200).send({
+                    message:"Password should be of at least 6 digit!",status: 0
+                });
+        }else if (userDetails.password !== userDetails.confirm_password) {
+            res.status(200).send({  
+                message: "Password and confirm password don't matched.",status: 0
+            });
+        }else{
+            const hash = await hashPassword(userDetails.password, 10);
+            delete userDetails['confirm_password']
+            delete userDetails['confirm_username']
+            userDetails['plain_password'] = userDetails.password
+            userDetails['password'] = hash
+            await User.where({ 'ID': user_data.ID }).save(userDetails, { patch: true });
+            res.status(200).send({  
+                message: "Updated Successfully.",
+                status: 1
+            });
+        }
+    }catch(err){
+        console.log("Error in updateAccountDetails",err)
+        res.status(200).send({  
+            message: "Something went wrong.",
+            status: 0
+        });
+    }
+}
+
+// function executes to recover cancel users subscription 
+exports.cancelSubscription = async function(req,res){
+    try{
+        const data = req.body
+       
+        await UserPlans.where({ 'user_id': data.user_id, 'subscription_id': data.subscription_id }).save({
+            'cancel_plan' : 1
+        }, { patch: true });
+        res.status(200).send({  
+            message: "Subscription cancelled successfully.",
+            status: 1
+        });
+    }catch(err){
+        console.log("Error in updateAccountDetails",err)
+        res.status(200).send({  
+            message: "Something went wrong.",
+            status: 0
+        });
+    }
 }

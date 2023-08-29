@@ -43,11 +43,17 @@ router.all('/addPolColumns', DBController.addPolColumns);
 
 //auth and payment
 router.post('/register' , AuthController.register);
-router.get('/plans' , AuthController.plans);
+router.post('/subscribe', auth_middleware.auth,AuthController.subscribe);
+router.get('/plans/' , AuthController.plans);
+router.get('/plansForPricing/:activeTab' , AuthController.plansForPricing);
+
 router.post('/login' , AuthController.login);
 
 router.post('/subscribe', auth_middleware.auth,AuthController.subscribe);
+
+
 router.post('/user_detail', auth_middleware.auth,AuthController.userDetail);
+
 router.post('/save_file', auth_middleware.auth,AuthController.saveFile);
 router.post('/update_file', auth_middleware.auth,AuthController.updateFile);
 router.post('/get_user_files', auth_middleware.auth,AuthController.getuserFiles);
@@ -74,7 +80,23 @@ router.get('/users/list', auth_middleware.auth,AdminController.usersList);
 router.post('/user/add', auth_middleware.auth,AdminController.userAdd);
 router.post('/user/update', auth_middleware.auth,AdminController.userUpdate);
 router.post('/user/delete', auth_middleware.auth,AdminController.userDelete);
-router.post('/user/delete', auth_middleware.auth,AdminController.userDelete);
+// router.post('/user/delete', auth_middleware.auth,AdminController.userDelete);
 router.post('/console_user/add', auth_middleware.auth,AdminController.consoleUserAdd);
 
+
+router.post('/user/register&subscribe/test-plan',AuthController.registerWithTestPlan)
+router.post('/user/register&subscribe/paid-plan',AuthController.registerWithPaidPlan)
+router.post('/user/send/forgot-password',AuthController.sendForgotPassLink)
+router.post('/user/forgot-password',AuthController.forgotPassword)
+router.post('/user/update-account-details',auth_middleware.auth,AuthController.updateAccountDetails)
+router.post('/user/cancel-subscription',auth_middleware.auth,AuthController.cancelSubscription)
+router.post('/user/update-subscription-type', auth_middleware.auth,AuthController.updateSubscriptionType);
+router.get('/fetchUser/:userId', AuthController.fetchUser);
+
+router.post('/update-plan-price/:activeTab', auth_middleware.auth,AdminController.updatePlanPrice);
+router.post('/user/update-time-tracker', auth_middleware.auth,AdminController.userUpdateTrackedTime);
+router.post('/createCoupon', auth_middleware.auth,AdminController.createCoupon);
+router.get('/fetchActiveCoupon', auth_middleware.auth,AdminController.fetchActiveCoupon);
+
+router.post('/update-payment&last_charge',AuthController.updateUserDetailsHook)
 module.exports = router;

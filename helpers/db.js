@@ -6,7 +6,6 @@ var PostgreSQL = require('./postgres');
 
 //create connection to database by host,user,password and database. For this mysql2 package is used tomake connection to mysql 
 exports.createConnection = async function (config) {
-
 	return new Promise((resolve, reject) => {
 		if (config.type == 'PostgreSQL') {
 			//console.log(config, 'config h herr')
@@ -193,7 +192,7 @@ exports.getTableResultSet = async function (config, no_of_rows = null) {
 
 	var data = config.dbDetails
 	var table = config.dbTable
-
+	var datalink = config.dataLinkDetail
 	console.log(config,'config UU U ')
 	return new Promise(async (resolve, reject) => {
 
@@ -208,18 +207,19 @@ exports.getTableResultSet = async function (config, no_of_rows = null) {
 			} else {
 				reject(0)
 			}
-		}else{
+		}else if(datalink!=''){
 			if (data.type == 'PostgreSQL') {
-				var results = await PostgreSQL.getSqlData(data, config.dataLinkDetail.sql);
+				var results = await PostgreSQL.getSqlData(data, datalink.sql);
 				resolve({ results: results, fields: config.fields })
 			  } else if (data.type == 'MySQL') {
-				var results = await MySQl.getSqlData(data, config.dataLinkDetail.sql);
-				//console.log(results,'resove')
+				var results = await MySQl.getSqlData(data, datalink.sql);
 				resolve({ results: results, fields: config.fields })
 			  } else {
 				reject(0)
 				
 			  }
+		}else{
+			reject(0)
 		}
 	});
 }

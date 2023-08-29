@@ -10,7 +10,7 @@ var PostgreSQL = require('../helpers/postgres');
 
 /**Add database and create connection to check id DB is connectting or not*/
 exports.addDatabase = async function (req, res) {
-
+  
   var data = req.body
   var connection = await DBHelper.createConnection(data);
 
@@ -325,11 +325,14 @@ exports.rollbackPoll = async function (req, res) {
   for (var i = 0; i < data.length; i++) {
     var fn = data[i].function;
     var output_table_info = data[i].table;
-  
-    var resultSetR = await  DBHelper.getTableResultSet(output_table_info)
-    resultSet = resultSetR.results
-   
-    output.push({ 'output_table': output_table_info.name, 'resultSet': resultSet })
+    
+    try{
+      var resultSetR = await  DBHelper.getTableResultSet(output_table_info)
+      resultSet = resultSetR.results
+      output.push({ 'output_table': output_table_info.name, 'resultSet': resultSet })
+    }catch(err){
+      console.log("Error in rollbackPoll",err);
+    }
   }
   res.status(200).send({
     status: 1,
