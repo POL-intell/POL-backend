@@ -55,6 +55,8 @@ router.post('/subscribe', auth_middleware.auth,AuthController.subscribe);
 router.post('/user_detail', auth_middleware.auth,AuthController.userDetail);
 
 router.post('/save_file', auth_middleware.auth,AuthController.saveFile);
+router.post('/delete_files', auth_middleware.auth,AuthController.deleteFiles);
+
 router.post('/update_file', auth_middleware.auth,AuthController.updateFile);
 router.post('/get_user_files', auth_middleware.auth,AuthController.getuserFiles);
 //folder
