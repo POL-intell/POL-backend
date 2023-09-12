@@ -307,7 +307,7 @@ exports.saveFile = async function (req, res) {
 
     var data = req.body
 
-    var exitfile = await UserFile.where({ 'name': data.name, 'user_id': req.user.ID }).count();
+    var exitfile = await UserFile.where({ 'name': data.name, 'user_id': req.user.ID, 'folder_id':data.folder_id }).count();
 
     if (exitfile == 0) {
 
@@ -317,8 +317,7 @@ exports.saveFile = async function (req, res) {
             'user_id': req.user.ID,
             'folder_id': data.folder_id
 
-        })
-            .save(null, { method: 'insert' });
+        }).save(null, { method: 'insert' });
         
         var existTemp = await Temp.where({ 'user_id': req.user.ID }).count();
         if (existTemp > 0) {
@@ -351,7 +350,7 @@ exports.saveFile = async function (req, res) {
     } else {
 
         res.status(200).send({
-            message: "File name already exist",
+            message: "This file name already exists, choose another name",
             status: 0,
 
         });
@@ -359,6 +358,40 @@ exports.saveFile = async function (req, res) {
     }
 }
 
+// deleteFile accord to userid
+exports.deleteFiles = async function(req,res){
+    let data = req.body
+    console.log("data",data)
+    if(data.type === 'folder'){
+        let count = await UserFile.where({'folder_id': data.id }).count()
+        console.log("count",count)
+        if(count > 0){
+            let allFiles = await UserFile.where({'folder_id': data.id }).fetchAll()
+            allFiles = allFiles.toJSON()
+            for(let file of allFiles){
+                await UserFile.where({'id': file.id }).destroy();
+            }
+            await Folder.where({'id':data.id}).destroy();
+            res.status(200).send({
+                message: "Successfully deleted",
+                status: 1
+            });
+        }else{
+            await Folder.where({'id':data.id}).destroy();
+            res.status(200).send({
+                message: "Successfully deleted",
+                status: 1
+            });
+        } 
+    }else{
+        await UserFile.where({'id':data.id}).destroy();
+        res.status(200).send({
+            message: "Successfully deleted",
+            status: 1
+        });
+    }
+    
+}
 
 /**Update already exusting file*/
 exports.updateFile = async function (req, res) {
@@ -396,7 +429,6 @@ exports.getuserFiles = async function (req, res) {
 
 /**To save folder according to parnet folder of a user*/
 exports.saveFolder = async function (req, res) {
-    yearly_price_id
     var data = req.body
 
     var folder = await new Folder({
@@ -404,8 +436,7 @@ exports.saveFolder = async function (req, res) {
         'parent_folder_id': data.parent_folder_id,
         'user_id': req.user.ID,
 
-    })
-        .save(null, { method: 'insert' });
+    }).save(null, { method: 'insert' });
 
     res.status(200).send({
         message: "Folder has been saved",

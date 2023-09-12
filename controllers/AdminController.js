@@ -21,7 +21,6 @@ const saltRounds = 10;
 
 /**Get all users list from users table */
 exports.usersList = async function (req, res) {
-
     var users = await User.where({}).fetchAll({ withRelated: [{
         'discount': (qb) => {
           qb.where('is_active', true)
