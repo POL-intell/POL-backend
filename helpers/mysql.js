@@ -24,7 +24,7 @@ exports.createConnection = async function (config) {
                     status: 0
                 });
             } else {
-                console.log('connection here')
+                console.log('connection here 11111')
                 resolve({
                     connection: connection,
                     status: 1

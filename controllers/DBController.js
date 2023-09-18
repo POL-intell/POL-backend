@@ -4,14 +4,17 @@ var router = express.Router();
 var DBHelper = require('../helpers/db');
 const stream = require('stream');
 const { createPool } = require('mysql2');
-
 var MySQl = require('../helpers/mysql');
 var PostgreSQL = require('../helpers/postgres');
-
+const SqlLite = require('../helpers/sqlite');
+const path = require('path')
+const desktopPath = require('os').homedir()
 /**Add database and create connection to check id DB is connectting or not*/
 exports.addDatabase = async function (req, res) {
   
   var data = req.body
+  const filePath = path.join(desktopPath, '/Desktop/sqlite-sakila.db');
+  data.dbPath = filePath
   var connection = await DBHelper.createConnection(data);
 
   if (connection && connection.status == 1) {
@@ -31,7 +34,7 @@ exports.addDatabase = async function (req, res) {
 
 /**Get the table slist from database details*/
 exports.getTables = async function (req, res) {
-
+  
   var data = req.body
 
   if (data.type == 'PostgreSQL') {
@@ -48,7 +51,15 @@ exports.getTables = async function (req, res) {
       status: 1,
       data: result.result
     });
-  } else {
+  }else if (data.type == 'SQLite') {
+    const filePath = path.join(desktopPath, '/Desktop/sqlite-sakila.db');
+    data.dbPath = filePath
+    var result = await SqlLite.getTablesListOfDatabase(data)
+    res.status(200).send({
+      status: 1,
+      data: result.result
+    });
+  }else {
     res.status(500).send({
       message: "Wrong DB Type",
       status: 0
@@ -99,6 +110,14 @@ exports.getMetaData = async function (req, res) {
       res.status(200).send({
         status: 1,
       });
+    }
+    else if (data.type == 'SQLite') {
+      const filePath = path.join(desktopPath, '/Desktop/sqlite-sakila.db');
+      data.dbPath = filePath
+      var uniqueCall = await SqlLite.getUniqueCol(req.body, table);
+      res.status(200).send({
+        status: 1,
+      });
     } else {
       res.status(200).send({
         status: 0,
@@ -131,6 +150,15 @@ exports.getTableData = async function (req, res) {
         });
       } else if (data.type == 'MySQL') {
         var results = await MySQl.getTableData(data, table);
+        console.log('comes here ')
+        res.status(200).send({
+          status: 1,
+          data: results
+        });
+      }else if (data.type == 'SQLite') {
+        const filePath = path.join(desktopPath, '/Desktop/sqlite-sakila.db');
+        data.dbPath = filePath
+        var results = await SqlLite.getTableData(data, table);
         console.log('comes here ')
         res.status(200).send({
           status: 1,

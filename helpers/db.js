@@ -3,6 +3,7 @@ const stream = require('stream');
 const { createPool } = require('mysql2');
 var MySQl = require('./mysql');
 var PostgreSQL = require('./postgres');
+const SqlLite = require('./sqlite')
 
 //create connection to database by host,user,password and database. For this mysql2 package is used tomake connection to mysql 
 exports.createConnection = async function (config) {
@@ -45,7 +46,24 @@ exports.createConnection = async function (config) {
 
 				}
 			});
-		} else {
+		}else if(config.type == 'SQLite'){
+			SqlLite.createConnection(config).then((connection)=>{
+				if (connection) {
+					//console.log('connection here also ')
+					resolve({
+						connection: connection.connection,
+						status: 1
+					});
+				} else {
+					//console.log('here reject')
+					reject({
+						message: "error",
+						status: 0
+					});
+
+				}
+			})
+		}else {
 			console.log('no one ')
 
 		}
@@ -96,6 +114,23 @@ async function makeConnection(config) {
 
 				}
 			});
+		}else if(config.type == 'SQLite'){
+			SqlLite.createConnection(config).then((connection)=>{
+				if (connection) {
+					//console.log('connection here also ')
+					resolve({
+						connection: connection.connection,
+						status: 1
+					});
+				} else {
+					//console.log('here reject')
+					reject({
+						message: "error",
+						status: 0
+					});
+
+				}
+			})
 		} else {
 			console.log('no one ')
 
