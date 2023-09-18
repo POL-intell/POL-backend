@@ -47,9 +47,10 @@ exports.createConnection = async function (config) {
 				}
 			});
 		}else if(config.type == 'SQLite'){
+			console.log("config on connection",config)
 			SqlLite.createConnection(config).then((connection)=>{
 				if (connection) {
-					//console.log('connection here also ')
+					console.log('connection success ')
 					resolve({
 						connection: connection.connection,
 						status: 1

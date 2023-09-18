@@ -2,7 +2,7 @@ var mysql = require('mysql2');
 const stream = require('stream');
 const { createPool } = require('mysql2');
 const BatchStream = require('batch-stream');
-const sqlite3 = require('sqlite');
+const sqlite3 = require('sqlite3').verbose();
 
 //create connection to database by host,user,password and database. For this mysql2 package is used tomake connection to mysql 
 exports.createConnection = async function (config) {
