@@ -392,6 +392,7 @@ exports.deleteFiles = async function(req,res){
     }
     
 }
+
 /**Update already exusting file*/
 exports.updateFile = async function (req, res) {
 
@@ -435,8 +436,7 @@ exports.saveFolder = async function (req, res) {
         'parent_folder_id': data.parent_folder_id,
         'user_id': req.user.ID,
 
-    })
-        .save(null, { method: 'insert' });
+    }).save(null, { method: 'insert' });
 
     res.status(200).send({
         message: "Folder has been saved",
