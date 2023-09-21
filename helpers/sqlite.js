@@ -38,56 +38,26 @@ exports.createConnection = async function (config) {
 }
 async function makeConnection(config) {
     config.dbPath = filePath
-    return new Promise(async (resolve, reject) => {
-        const isLocked = await isDatabaseLocked(config);
-        console.log("isLocked",isLocked)
-        if (isLocked) {
-            reject({
-                message: "DataBase is Locked",
-                status: 0
-            });
-        }else{
-            let connection =  new sqlite3.Database(config.dbPath, (err) => {
-                if (err) {
-                    console.log(err, 'err here')
-                    reject({
-                        message: err,
-                        status: 0
-                    });
-                } 
-            });
-            if(connection){
-                resolve({
-                    connection: connection,
-                    status: 1
-                });
-            }
-            console.log("connection",connection)
-        }
-    });
-}
-
-
-async function isDatabaseLocked(config) {
     return new Promise((resolve, reject) => {
-        const db = new sqlite3.Database(config.dbPath);
-
-        db.serialize(() => {
-            db.exec('PRAGMA lock_status;', (err) => {
-                db.close();
-
-                if (err) {
-                    reject({
-                        message: err.message,
-                        status: 0
-                    });
-                } else {
-                    resolve(true); // Database is not locked
-                }
-            });
+        let connection =  new sqlite3.Database(config.dbPath, (err) => {
+            if (err) {
+                console.log(err, 'err here')
+                reject({
+                    message: err,
+                    status: 0
+                });
+            } 
         });
+        if(connection){
+            resolve({
+                connection: connection,
+                status: 1
+            });
+        }
+        console.log("connection",connection)
     });
 }
+
 exports.getTablesListOfDatabase = async function (config) {
     config.dbPath = filePath
     return new Promise((resolve, reject) => {
@@ -123,10 +93,7 @@ exports.getTablesListOfDatabase = async function (config) {
                 });
 
             }
-        }).catch((err) => {
-            console.log(err, 'errrrrr>>>>>>')
-            resolve(err)
-        });;
+        }).catch((err) => console.log(err, 'errrrrr'));;
     });
 }
 

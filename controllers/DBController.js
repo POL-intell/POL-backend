@@ -59,16 +59,10 @@ exports.getTables = async function (req, res) {
     // const filePath = path.join(desktopPath, '/Desktop/sqlite-sakila.db');
     // data.dbPath = filePath
     var result = await SqlLite.getTablesListOfDatabase(data)
-    console.log("result",result)
-    if(result.status == 0){
-      res.status(200).send(result);
-    }else{
-      res.status(200).send({
-        status: 1,
-        data: result.result
-      });
-    }
-    
+    res.status(200).send({
+      status: 1,
+      data: result.result
+    });
   }else {
     res.status(500).send({
       message: "Wrong DB Type",
