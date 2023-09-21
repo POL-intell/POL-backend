@@ -5,8 +5,12 @@ var DBHelper = require('../helpers/db');
 var async = require('async');
 var MySQl = require('../helpers/mysql');
 var PostgreSQL = require('../helpers/postgres');
+var SqlLite = require('../helpers/sqlite');
+// const path = require('path')
 
-/**execute pol accepts functions and calcualte the functions and return the result back for output table*/
+// /**execute pol accepts functions and calcualte the functions and return the result back for output table*/
+// const currentDirectory = __dirname;
+// const filePath = path.join(currentDirectory, './sqlite-sakila.db');
 exports.execuatePoll = async function (req, res) {
 
   var functions = req.body.functions;
@@ -200,17 +204,19 @@ exports.checkUNiqueColumns = async function (req, res) {
       if (output_table_info.dbDetails.type == 'PostgreSQL') {
         var uniqueCall = await PostgreSQL.getUniqueCol(output_table_info.dbDetails, output_table_info.dbTable);
         
-      } else if (output_table_info.dbDetails.type == 'MySQL') {
+      }else if (output_table_info.dbDetails.type == 'MySQL') {
         var uniqueCall = await MySQl.getUniqueCol(output_table_info.dbDetails, output_table_info.dbTable);
+        
+      } else if (output_table_info.dbDetails.type == 'SQLite') {
+        // output_table_info.dbDetails.dbPath = filePath
+        var uniqueCall = await SqlLite.getUniqueCol(output_table_info.dbDetails, output_table_info.dbTable);
         
       } 
 
     }catch (e) {
-
       console.log(e,'eee')
       required_col.push(output_table_info.dbTable)
 
-     
     }
   }
 
@@ -264,6 +270,8 @@ exports.commitPoll = async function (req, res) {
         var whereCol = "pol";
         try {
           var uniqueCall = await DBHelper.getUniqueCol(output_table_info.dbDetails, output_table_info.dbTable);
+          console.log("uniqueCall",uniqueCall)
+          // return;
           whereCol = uniqueCall.cols;
           //console.log(whereCol, 'whereColwhereColwhereCol')
         } catch (e) {
@@ -404,7 +412,7 @@ exports.commitPoll = async function (req, res) {
                 wherecolVal.push({ col: whereCol[w], val: "'" + resultSet[i][n] + "'" })
               }
             }
-
+            // return
             if (c == output_col) {
               resultSet[i][v] = result
               //update table columns cells
@@ -413,9 +421,6 @@ exports.commitPoll = async function (req, res) {
                 //console.log(i, M)
                 await batchOperationData.push({ 'where': wherecolVal, 'output_field': v, 'value': result, 'db_connection': output_table_db_connection, 'output_table_info': output_table_info });
                 if (batchOperationCounter == 50000 || i == M) {
-
-
-                  console.log('created batch')
                   batchOperationCounter = 0
                   batches.push(batch(1000, batchOperationData))
 
@@ -432,8 +437,7 @@ exports.commitPoll = async function (req, res) {
           }
         }
       }
-
-
+      console.log("batches",batches)
       async.series(batches, function (err, results) {
         if (err) console.log("Done! Error: ", err);
         console.log(new Date());
@@ -468,10 +472,11 @@ function batch(parallelLimit, data) {
     var toDo = [];
 
     //pushing each process onto the toDo list
+    console.log("data.length",data.length)
     for (var i = 0; i < data.length; i++) {
       toDo.push(process(data[i]));
     }
-
+    console.log("toDo",toDo)
     //run each process from the toDo list in series
     async.parallelLimit(toDo, parallelLimit, function (err, result) {
       if (err) {
@@ -489,8 +494,7 @@ function batch(parallelLimit, data) {
 
 /**process the batched data*/
 function process(data) {
-//  console.log('processsssssssssssssssssssssssssssssssssssssssssssssssss',data)
-
+  console.log("In process")
   var db = data.db_connection;
   var updateCol = data.output_field;
   var val = data.value;
@@ -511,10 +515,8 @@ function process(data) {
         }
         where = where + ' ' + wdata[w].col + '= ' + wdata[w].val + ' ';
       }
-
       var query = 'update ' + output_table_info.dbTable + '  set ' + updateCol + '=' + val + where
-   
-   //   console.log(query, 'query',output_table_info.type)
+      
       if(output_table_info.dbDetails.type=='PostgreSQL'){
         db.connection.query(query, function (error, results, fields) {
           cb();
@@ -533,6 +535,47 @@ function process(data) {
             //console.log(results)
           }
         });
+      }
+      else if(output_table_info.dbDetails.type=='SQLite'){
+        db.connection.serialize(function () {
+        db.connection.all(query, function (error, results, fields) {
+          cb();
+          if (error) {
+            console.log(error)
+          } else {
+            //console.log(results)
+          }
+        });
+      })
+        // db.connection.serialize(function () {
+        //   db.connection.run('BEGIN TRANSACTION', function (beginError) {
+        //     if (beginError) {
+        //       console.log("beginError",beginError);
+        //     } else {
+        //       db.connection.all(query, function (error, results, fields) {
+        //         if (error) {
+        //           db.connection.run('ROLLBACK', function (rollbackError) {
+        //             if (rollbackError) {
+        //               console.log("rollbackError",rollbackError);
+        //             }
+        //           });
+        //         } else {
+        //           db.connection.run('COMMIT', function (commitError) {
+        //             if (commitError) {
+        //               console.log("commitError",commitError);
+        //               // Handle the commit error
+        //             }
+        //           });
+        //         }
+        
+        //         // You can call the callback function (cb) here if needed
+        //         cb();
+        //       });
+        //     }
+        //   });
+        // });
+        
+        
       }
     } else {
       console.log('errrrrr hereeee')

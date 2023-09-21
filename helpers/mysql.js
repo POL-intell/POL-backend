@@ -32,7 +32,7 @@ exports.createConnection = async function (config) {
             }
         });
     }).catch(error => {
-        console.log('eee', 'error', error)
+        console.log('eee11', 'error', error)
 
     });
 
