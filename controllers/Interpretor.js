@@ -216,19 +216,28 @@ exports.checkUNiqueColumns = async function (req, res) {
     }catch (e) {
       console.log(e,'eee')
       required_col.push(output_table_info.dbTable)
-
     }
   }
+    console.log("required_col",required_col)
 
     if(required_col.length>0){
       required_col = required_col.filter(function (value, index, array) { 
         return array.indexOf(value) === index;
       });
-       res.status(200).send({
-        status: 0,
-        data: [],
-        message: "POL need at least one column of unique key in "+required_col.join(', ')+" table(s) to work, since no such column found, POL column must be added to the database table. Are you agree to this modification?"
-      });
+      if(output_table_info.dbDetails.type == 'SQLite'){
+        res.status(200).send({
+          status: 0,
+          data: [],
+          type:"SQLITE",
+          message: "You must have primary column in order to commit the result"
+        });
+      }else{
+        res.status(200).send({
+         status: 0,
+         data: [],
+         message: "POL need at least one column of unique key in "+required_col.join(', ')+" table(s) to work, since no such column found, POL column must be added to the database table. Are you agree to this modification?"
+       });
+      }
       return;
 
     }else{
@@ -270,7 +279,6 @@ exports.commitPoll = async function (req, res) {
         var whereCol = "pol";
         try {
           var uniqueCall = await DBHelper.getUniqueCol(output_table_info.dbDetails, output_table_info.dbTable);
-          console.log("uniqueCall",uniqueCall)
           // return;
           whereCol = uniqueCall.cols;
           //console.log(whereCol, 'whereColwhereColwhereCol')
@@ -437,7 +445,6 @@ exports.commitPoll = async function (req, res) {
           }
         }
       }
-      console.log("batches",batches)
       async.series(batches, function (err, results) {
         if (err) console.log("Done! Error: ", err);
         console.log(new Date());
@@ -476,7 +483,6 @@ function batch(parallelLimit, data) {
     for (var i = 0; i < data.length; i++) {
       toDo.push(process(data[i]));
     }
-    console.log("toDo",toDo)
     //run each process from the toDo list in series
     async.parallelLimit(toDo, parallelLimit, function (err, result) {
       if (err) {
@@ -494,7 +500,6 @@ function batch(parallelLimit, data) {
 
 /**process the batched data*/
 function process(data) {
-  console.log("In process")
   var db = data.db_connection;
   var updateCol = data.output_field;
   var val = data.value;
