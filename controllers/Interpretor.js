@@ -229,13 +229,13 @@ exports.checkUNiqueColumns = async function (req, res) {
           status: 0,
           data: [],
           type:"SQLITE",
-          message: "You must have primary column in order to commit the result"
+          message: "Pol requires a unique column type to perform a commit operation."
         });
       }else{
         res.status(200).send({
          status: 0,
          data: [],
-         message: "POL need at least one column of unique key in "+required_col.join(', ')+" table(s) to work, since no such column found, POL column must be added to the database table. Are you agree to this modification?"
+         message: "Pol requires a unique column type to perform a commit operation."
        });
       }
       return;
