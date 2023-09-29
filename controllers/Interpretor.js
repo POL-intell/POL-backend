@@ -199,15 +199,18 @@ exports.checkUNiqueColumns = async function (req, res) {
     for (var f = 0; f < functions.length; f++) {
       var fn = functions[f];
       var output_table_info = functions[f].table;
+      console.log("output_table_info",output_table_info)
     //  var output_table_db_connection = await DBHelper.createConnection(output_table_info.dbDetails);
     try {
       if (output_table_info.dbDetails.type == 'PostgreSQL') {
         var uniqueCall = await PostgreSQL.getUniqueCol(output_table_info.dbDetails, output_table_info.dbTable);
         
       }else if (output_table_info.dbDetails.type == 'MySQL') {
+        console.log("in mysql")
         var uniqueCall = await MySQl.getUniqueCol(output_table_info.dbDetails, output_table_info.dbTable);
         
       } else if (output_table_info.dbDetails.type == 'SQLite') {
+        console.log("in sqlite")
         // output_table_info.dbDetails.dbPath = filePath
         var uniqueCall = await SqlLite.getUniqueCol(output_table_info.dbDetails, output_table_info.dbTable);
         
@@ -224,18 +227,20 @@ exports.checkUNiqueColumns = async function (req, res) {
       required_col = required_col.filter(function (value, index, array) { 
         return array.indexOf(value) === index;
       });
+      console.log("output_table_info.dbDetails.type",output_table_info.dbDetails.type)
       if(output_table_info.dbDetails.type == 'SQLite'){
         res.status(200).send({
           status: 0,
           data: [],
-          type:"SQLITE",
-          message: "Pol requires a unique column type to perform a commit operation."
+          type:"SQLite",
+          message: "POL requires a unique column type to perform a commit operation."
         });
       }else{
         res.status(200).send({
          status: 0,
          data: [],
-         message: "Pol requires a unique column type to perform a commit operation."
+         type:"typical",
+         message: "POL requires a unique column type to perform a commit operation."
        });
       }
       return;
