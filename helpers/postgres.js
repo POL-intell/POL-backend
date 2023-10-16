@@ -259,23 +259,19 @@ exports.addPolColumn = async function (config, table) {
     });
 }
 
-exports.checkPrivilige = async function(config){
+
+exports.checkPrivilige = async function(config,table){
     return new Promise((resolve,reject)=>{
+        console.log("config",config)
         makeConnection(config).then((db) =>{
             if(db && db.status ==1){
-                let q = `SELECT * FROM mysql.user WHERE USER = ${config.username} AND Update_priv = 'Y' AND HOST = 'localhost' `
-                db.connection.query(q
-                , function (error, results, fields) {
+                let q = `SELECT COUNT(*) FROM information_schema.role_table_grants WHERE grantee=$1 AND privilege_type=$2 AND table_catalog=$3 AND is_grantable=$4 AND table_name =$5;`
+                db.connection.query(q, function (error, results) {
                     if (error) {
-                        console.log("Error",error)
-                        reject(0)
+                        reject({status:0})
                     } else {
-                        console.log("results",results)
-                       if(results.length > 0){
-                            resolve(1)
-                       }else{
-                        reject(0)
-                       }
+                       console.log("results",results)
+                    //    resolve({status:1})
                     }
                 });
             }else{

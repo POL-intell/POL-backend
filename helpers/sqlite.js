@@ -263,32 +263,6 @@ exports.getUniqueCol = async function (config, table) {
 
 
 
-// exports.getUniqueCol = async function (dbPath, table) {
-//     return new Promise(async (resolve, reject) => {
-//         if (!dbConnection) {
-//             dbConnection = await makeConnection(config);
-//         }
-
-//         dbConnection.serialize(() => {
-//             const query = `SELECT COLUMN_NAME, CONSTRAINT_TYPE FROM (PRAGMA foreign_key_list('${table}') AS FKL JOIN PRAGMA index_list('${table}') AS IL ON FKL.id = IL.seq JOIN PRAGMA index_info(IL.name) AS II ON IL.name = II.name) GROUP BY COLUMN_NAME, CONSTRAINT_TYPE;`;
-
-//             dbConnection.all(query, [], (err, rows) => {
-//                 if (err) {
-//                     console.error(err.message);
-//                     reject({ status: 0 });
-//                 } else {
-//                     if (rows.length > 0) {
-//                         const cols = rows.map((e) => e.COLUMN_NAME);
-//                         resolve({ cols: cols, status: 1 });
-//                     } else {
-//                         reject({ status: 0 });
-//                     }
-//                 }
-//             });
-//         });
-
-//     });
-// };
 
 exports.createResultTable = function (dbDetails, tableName, totalRows, columnName) {
     return new Promise(async (resolve, reject) => {

@@ -253,41 +253,27 @@ exports.checkPrivilige = async function(config,table){
         console.log("config",config)
         makeConnection(config).then((db) =>{
             if(db && db.status ==1){
-                let q = `SELECT * FROM mysql.user WHERE USER = "${config.username}" AND Update_priv = 'Y'`
-                console.log("query",q)
-                db.connection.query(q
-                , function (error, results) {
-                    console.log(results, 'o o o o  o o o o o')
+                let q = `SELECT * FROM mysql.db WHERE USER = "${config.username}" AND Update_priv = 'Y' AND DB= "${config.database}"`
+                db.connection.query(q, function (error, results) {
                     if (error) {
-                        console.log("error inside checkprivilige",error)
-                        reject(0)
+                        reject({status:0})
                     } else {
-                        if(results.length>0){
+                        if(results.length > 0){
                             resolve(1)
                         }else{
-                            db.connection.query(`SELECT * FROM mysql.db WHERE USER = "${config.username}" AND Update_priv = 'Y' AND DB= "${config.database}"`
-                            , function (error, results) {
-                                if (error) {
-                                    reject(0)
-                                } else {
-                                   if(results.length > 0){
-                                        resolve(1)
-                                   }else{
-                                    db.connection.query(`SELECT Table_priv FROM mysql.tables_priv WHERE USER = "${config.username}" AND DB= "${config.database}" AND TABLE_NAME = ${table}`
-                                    , function (error, results) {
-                                        if (error) {
-                                            reject(0)
-                                        } else {
-                                           if(results.length > 0){
-                                                resolve(1)
-                                           }else{
-                                            reject(0)
-                                           }
-                                        }
-                                    });
-                                   }
+                        db.connection.query(`SELECT Table_priv FROM mysql.tables_priv WHERE USER = "${config.username}" AND DB= "${config.database}" AND TABLE_NAME = ${table}`
+                        , function (error, results) {
+                            if (error) {
+                                reject({status:0})
+                            } else {
+                                const array = results[0].Table_priv.split(',')                                
+                                if(array.includes('Update')){
+                                    resolve({status:1})
+                                }else{
+                                    reject({status:0})
                                 }
-                            });
+                            }
+                        });
                         }
                     }
                 });
