@@ -43,7 +43,6 @@ exports.getTables = async function (req, res) {
 
   if (data.type == 'PostgreSQL') {
     var result = await PostgreSQL.getTablesListOfDatabase(data)
-
     res.status(200).send({
       status: 1,
       data: result.result
@@ -129,7 +128,6 @@ exports.getTableData = async function (req, res) {
         });
       } else if (data.type == 'MySQL') {
         var results = await MySQl.getTableData(data, table);
-        console.log('comes here ')
         res.status(200).send({
           status: 1,
           data: results
@@ -137,7 +135,6 @@ exports.getTableData = async function (req, res) {
       }else if (data.type == 'SQLite') {
         // data.dbPath = filePath
         var results = await SqlLite.getTableData(data, table);
-        console.log('comes here ')
         res.status(200).send({
           status: 1,
           data: results
@@ -165,7 +162,6 @@ exports.getTableData = async function (req, res) {
 }
 /**get the sql result of a table*/
 exports.getSqlData = async function (req, res) {
-  console.log("Here in sql data")
   var data = req.body.dbDetails;
   var {sql} = req.body
   try {
@@ -184,7 +180,6 @@ exports.getSqlData = async function (req, res) {
   }else if (data.type == 'SQLite') {
     // data.dbPath = filePath
     var results = await SqlLite.getSqlData(data, sql);
-    console.log('comes here ')
     res.status(200).send({
       status: 1,
       data: results
@@ -346,5 +341,154 @@ exports.addPolColumns = async function (req, res) {
     }
   }
 }
+
+exports.addColumn = async function (req, res) {
+  const {dbDetails, dbTable} = req.body
+  try {
+
+    var result = await DBHelper.addPolColumn(dbDetails, dbTable);
+    res.status(200).send({
+      status: 1,
+      message: 'Pol column added successfully.'
+    });
+
+  }catch (e) {
+
+    res.status(200).send({
+      status: 0,
+      message: 'Something went wrong while adding column'
+    });
+  }
+}
+exports.checkUniqueCol = async function(req,res){
+  const {dbDetails, dbTable} = req.body
+  try{
+    if (dbDetails.type == 'PostgreSQL') {
+      await PostgreSQL.getUniqueCol(dbDetails, dbTable)
+    }else if (dbDetails.type == 'MySQL') {
+      await MySQl.getUniqueCol(dbDetails, dbTable)
+    }else if (dbDetails.type == 'SQLite') {
+      await SqlLite.getUniqueCol(dbDetails, dbTable)
+    }
+    return res.status(200).send({
+      status:1,
+    })
+  }catch(err){
+    console.log("Error",err)
+    let message = dbDetails.type == 'SQLite' ? 'POL requires a unique column type to perform a commit operation. To create a result table for SQLite, click the “Result Table” button' : 'POL requires a unique column type to perform a commit\\save operation. Click the “OK” button to automatically create the unique column or click the “Result Table” button.'
+    try{
+      console.log("Inside try")
+      if (dbDetails.type == 'PostgreSQL') {
+        await PostgreSQL.checkPrivilige(dbDetails, dbTable)
+      }else if (dbDetails.type == 'MySQL') {
+        await MySQl.checkPrivilige(dbDetails, dbTable)
+      }else if (dbDetails.type == 'SQLite') {
+        return res.status(200).send({
+          status:0,
+          permission:0,
+          message:message
+        })
+      }
+      return res.status(200).send({
+        status:0,
+        permission:1,
+        message:message
+      })
+    }catch(err){
+      console.log("Inside catch")
+      return res.status(200).send({
+        status:0,
+        permission:0,
+        message:message
+      })
+    }
+  }
+}
+
+exports.createResultTable = async function(req,res){
+  const {dbDetails, tableName, totalRows, columnName} = req.body
+  console.log("req.body",req.body)
+  try{
+    if (dbDetails.type == 'PostgreSQL') {
+      await PostgreSQL.checkTableExistence(dbDetails, tableName)
+    }else if (dbDetails.type == 'MySQL') {
+      await MySQl.checkTableExistence(dbDetails, tableName)
+    }else if (dbDetails.type == 'SQLite') {
+      await SqlLite.checkTableExistence(dbDetails, tableName)
+    }  
+
+    return res.status(200).send({
+      status:0,
+      message:"Table already exist"
+    })
+  
+  }catch(err){
+    console.log("Errorr")
+    try{
+      if (dbDetails.type == 'PostgreSQL') {
+        await PostgreSQL.createResultTable(dbDetails, tableName, totalRows, columnName)
+      }else if (dbDetails.type == 'MySQL') {
+        console.log("here")
+        await MySQl.createResultTable(dbDetails, tableName, totalRows, columnName)
+      }else if (dbDetails.type == 'SQLite') {
+        await SqlLite.createResultTable(dbDetails, tableName, totalRows, columnName)
+      }  
+      return res.status(200).send({
+        status:1,
+        message:"Table created successfully"
+      })
+    }catch(err){
+      console.log("error",err)
+      return res.status(200).send({
+        status:0,
+        message:"Something went wrong"
+      })
+    }
+  }
+}
+
+
+exports.createResultColumn = async function(req,res){
+  const {tableName,dbDetails,columnName} = req.body
+  try{
+    if (dbDetails.type == 'PostgreSQL') {
+      await PostgreSQL.checkColumnExistence(dbDetails,tableName, columnName)
+    }else if (dbDetails.type == 'MySQL') {
+      await MySQl.checkColumnExistence(dbDetails,tableName, columnName)
+    }else if (dbDetails.type == 'SQLite') {
+      await SqlLite.checkColumnExistence(dbDetails,tableName, columnName)
+    }  
+
+    return res.status(200).send({
+      status:0,
+      message:"Column already exist"
+    })
+  
+  }catch(err){
+    console.log("err",err)
+    try{
+      if (dbDetails.type == 'PostgreSQL') {
+        await PostgreSQL.createColumn(dbDetails, tableName, columnName )
+      }else if (dbDetails.type == 'MySQL') {
+        await MySQl.createColumn(dbDetails, tableName, columnName )
+      }else if (dbDetails.type == 'SQLite') {
+        await SqlLite.createColumn(dbDetails, tableName, columnName )
+      }  
+      return res.status(200).send({
+        status:1,
+        message:"Column created successfully"
+      })
+    }catch(error){
+      console.log("error",error)
+      return res.status(200).send({
+        status:0,
+        message:"Something went wrong"
+      })
+    }
+  }
+
+}
+
+
 
 

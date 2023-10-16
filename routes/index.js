@@ -38,7 +38,10 @@ router.all('/rollbackPoll', DBController.rollbackPoll);
 //Add pol column to table 
 router.all('/addPolColumn/:table', DBController.addPolColumn);
 router.all('/addPolColumns', DBController.addPolColumns);
-
+router.all('/addColumn', DBController.addColumn);
+router.all('/checkUniqueCol', DBController.checkUniqueCol)
+router.all('/createResultTable', DBController.createResultTable)
+router.all('/createResultColumn', DBController.createResultColumn)
 
 
 //auth and payment

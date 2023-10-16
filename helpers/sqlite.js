@@ -213,38 +213,212 @@ exports.getUniqueCol = async function (config, table) {
         if (!dbConnection) {
             dbConnection = await makeConnection(config);
         }
-                // let q = "SELECT K.COLUMN_NAME, T.CONSTRAINT_TYPE FROM ( SELECT tbl_name AS TABLE_NAME, name AS CONSTRAINT_NAME, 'PRIMARY KEY' AS CONSTRAINT_TYPE FROM sqlite_master WHERE type = 'table'   AND sql LIKE '%PRIMARY KEY%' UNION SELECT tbl_name AS TABLE_NAME, name AS CONSTRAINT_NAME, 'FOREIGN KEY' AS CONSTRAINT_TYPE FROM sqlite_master WHERE type = 'table'   AND sql LIKE '%FOREIGN KEY%') AS T JOIN ( SELECT tbl_name AS TABLE_NAME, name AS CONSTRAINT_NAME, sql AS COLUMN_NAME FROM sqlite_master WHERE type = 'index' AND sql LIKE 'CREATE UNIQUE INDEX%') AS K ON K.TABLE_NAME = T.TABLE_NAME AND K.CONSTRAINT_NAME = T.CONSTRAINT_NAME WHERE T.TABLE_NAME = '" + table + "' ;"
-        let q = `PRAGMA index_list(${table});`;
-        dbConnection.all(q, async function (error, rows) {
+        // let q = "SELECT K.COLUMN_NAME, T.CONSTRAINT_TYPE FROM ( SELECT tbl_name AS TABLE_NAME, name AS CONSTRAINT_NAME, 'PRIMARY KEY' AS CONSTRAINT_TYPE FROM sqlite_master WHERE type = 'table'   AND sql LIKE '%PRIMARY KEY%' UNION SELECT tbl_name AS TABLE_NAME, name AS CONSTRAINT_NAME, 'FOREIGN KEY' AS CONSTRAINT_TYPE FROM sqlite_master WHERE type = 'table'   AND sql LIKE '%FOREIGN KEY%') AS T JOIN ( SELECT tbl_name AS TABLE_NAME, name AS CONSTRAINT_NAME, sql AS COLUMN_NAME FROM sqlite_master WHERE type = 'index' AND sql LIKE 'CREATE UNIQUE INDEX%') AS K ON K.TABLE_NAME = T.TABLE_NAME AND K.CONSTRAINT_NAME = T.CONSTRAINT_NAME WHERE T.TABLE_NAME = '" + table + "' ;"
+        let q1 = `PRAGMA table_info(${table})`;
+        dbConnection.all(q1, async function (error, rows) {
             if(error){
-                reject(0)
-            }
-            var cols = []
-            if(rows.length >0 ){
-                for (const row of rows) {
-                    if (row.unique == 1) {
-                        let q = `PRAGMA index_info(${row.name});`;
-                        dbConnection.all(q, function(err,result){
-                            if(err){
-                                reject(0)
-                            }
-                            let col_name = result[0]?.name
-                            cols.push(col_name)
-                            console.log("cols",cols)
-                            resolve({ cols: cols })
-                        })
-                        break;
-                    }else{
-                        resolve({ cols: cols })
+                let q2= `PRAGMA index_list(${table})`;
+                dbConnection.all(q2, async function (error, rows) {
+                    if(error){
+                        reject({status:0})
                     }
-                }
+                    var cols = []
+                    console.log("rows",rows)
+                    if(rows.length >0 ){
+                        for (const row of rows) {
+                            if (row.unique == 1) {
+                                let q3 = `PRAGMA index_info(${row.name});`;
+                                dbConnection.all(q3, function(err,result){
+                                    if(err){
+                                        reject({status:0})
+                                    }
+                                    let col_name = result[0]?.name
+                                    cols.push(col_name)
+                                    console.log("cols",cols)
+                                    resolve({ cols: cols,status:1 })
+                                })
+                                break;
+                            }else{
+                                console.log("cols",cols)
+                                resolve({ cols: cols, status:1 })
+                            }                                                      
+                        }
+                    }else{
+                        reject({status:0})
+                    }
+                    
+                });
             }else{
-                reject(0)
+                const primaryKeyColumns = rows.filter(column => column.pk === 1).map(column => column.name);
+                console.log("primary",primaryKeyColumns)
+                if(primaryKeyColumns.length > 0){
+                    resolve({ cols: primaryKeyColumns, status:1 })
+                }else{
+                    reject({status:0})
+                }
             }
-            
-        });
-       
+        });    
     });
 }
 
-  
+
+
+// exports.getUniqueCol = async function (dbPath, table) {
+//     return new Promise(async (resolve, reject) => {
+//         if (!dbConnection) {
+//             dbConnection = await makeConnection(config);
+//         }
+
+//         dbConnection.serialize(() => {
+//             const query = `SELECT COLUMN_NAME, CONSTRAINT_TYPE FROM (PRAGMA foreign_key_list('${table}') AS FKL JOIN PRAGMA index_list('${table}') AS IL ON FKL.id = IL.seq JOIN PRAGMA index_info(IL.name) AS II ON IL.name = II.name) GROUP BY COLUMN_NAME, CONSTRAINT_TYPE;`;
+
+//             dbConnection.all(query, [], (err, rows) => {
+//                 if (err) {
+//                     console.error(err.message);
+//                     reject({ status: 0 });
+//                 } else {
+//                     if (rows.length > 0) {
+//                         const cols = rows.map((e) => e.COLUMN_NAME);
+//                         resolve({ cols: cols, status: 1 });
+//                     } else {
+//                         reject({ status: 0 });
+//                     }
+//                 }
+//             });
+//         });
+
+//     });
+// };
+
+exports.createResultTable = function (dbDetails, tableName, totalRows, columnName) {
+    return new Promise(async (resolve, reject) => {
+       
+        try {
+            if(!dbConnection){
+                dbConnection = await makeConnection(dbDetails);
+            }
+
+            // Create table statement
+            const createTableStmt = `CREATE TABLE ${tableName} ("pol" INTEGER PRIMARY KEY AUTOINCREMENT, ${columnName} TEXT);`;
+
+            // Execute table creation statement
+            dbConnection.run(createTableStmt, (err) => {
+                if (err) {
+                    reject({ status: 0, error: err.message });
+                    return;
+                }
+
+                console.log(`Table ${tableName} created successfully.`);
+
+                // Insert data into the created table in batches
+                const batchSize = 5000;
+                const totalBatches = Math.ceil(totalRows / batchSize);
+
+                dbConnection.serialize(() => {
+                    dbConnection.run('BEGIN'); // Begin the transaction
+
+                    // Insert rows in batches
+                    for (let i = 0; i < totalBatches; i++) {
+                        const rowsInThisBatch = Math.min(batchSize, totalRows - i * batchSize);
+                        const values = Array.from({ length: rowsInThisBatch }, (_, j) => null);
+                        const placeholders = Array.from({ length: rowsInThisBatch }, () => '(?)').join(',');
+                        const insertQuery = `INSERT INTO ${tableName} (${columnName}) VALUES ${placeholders}`;
+
+                        dbConnection.run(insertQuery, values, (err) => {
+                            if (err) {
+                                dbConnection.run('ROLLBACK', () => { // Roll back the transaction in case of error
+                                    reject({ status: 0, error: err });
+                                });
+                            } else {
+                                if (i === totalBatches - 1) {
+                                    // If this is the last batch, commit the transaction
+                                    dbConnection.run('COMMIT', () => {
+                                        resolve({ status: 1, message: 'Table created and rows inserted successfully.' });
+                                    });
+                                }
+                            }
+                        });
+                    }
+                });
+            });
+        } catch (error) {
+           
+            reject({ status: 0, error: error.message });
+        }
+    });
+};
+
+exports.checkTableExistence= async function(dbDetails, tableName) {
+
+    return new Promise(async (resolve, reject) => {
+        if (!dbConnection) {
+            dbConnection = await makeConnection(dbDetails);
+        }
+        const checkTableQuery = `SELECT name FROM sqlite_master WHERE type='table' AND name='${tableName}'`;
+        console.log("checkTableQuery",checkTableQuery)
+        dbConnection.get(checkTableQuery, (err, row) => {
+            if(err) {
+                console.log("in error",err)
+                reject(err);
+            }else {
+                console.log("in res",row)
+                if(row){
+                    resolve(row ? true : false);
+                }else{
+                    reject({status:0})
+                }
+            }
+        });
+    });
+}
+
+
+exports.checkColumnExistence = async function(dbDetails, tableName, columnName) {
+    return new Promise(async(resolve, reject) => {
+        if (!dbConnection) {
+            dbConnection = await makeConnection(dbDetails);
+        }
+        const checkTableQuery = `PRAGMA table_info(${tableName});`;
+
+        dbConnection.all(checkTableQuery, (checkColumnError, checkColumnResult) => {
+            if (checkColumnError) {
+                console.log('checkColumnError', checkColumnError);
+                reject(checkColumnError);
+            } else {
+                const columnNames = checkColumnResult.map((column) => column.name);
+                if (columnNames.includes(columnName)) {
+                    resolve(checkColumnResult);
+                } else {
+                    reject(0);
+                }
+            }
+        });
+    });
+};
+
+
+
+exports.createColumn = async function (dbDetails, tableName, columnName) {
+
+    return new Promise(async (resolve, reject) => {
+        if (!dbConnection) {
+            dbConnection = await makeConnection(dbDetails);
+        }
+        dbConnection.serialize(() => {
+            dbConnection.run('BEGIN TRANSACTION');
+
+            const createColumnStmt = `ALTER TABLE ${tableName} ADD COLUMN ${columnName} TEXT DEFAULT NULL;`;
+
+            dbConnection.run(createColumnStmt, [], function (err) {
+                if (err) {
+                    dbConnection.run('ROLLBACK');
+                    reject({ status: 0, error: err.message });
+                } else {
+                    dbConnection.run('COMMIT');
+                    resolve({ status: 1,});
+                }
+            });
+        });
+
+    });
+};

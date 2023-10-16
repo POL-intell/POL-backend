@@ -186,7 +186,29 @@ exports.execuatePoll = async function (req, res) {
     });
   }
 }
-
+exports.checkUserPriviliges = async function (req,res) {
+  try {
+    let havePermission = false
+    if (output_table_info.dbDetails.type == 'PostgreSQL') {
+      havePermission = await PostgreSQL.checkPrivilige(config);
+      
+    }else if (output_table_info.dbDetails.type == 'MySQL') {
+      console.log("in mysql")
+      havePermission = await MySQl.checkPrivilige(config);
+      
+    }else if (output_table_info.dbDetails.type == 'SQLite') {
+      console.log("in sqlite")
+      // output_table_info.dbDetails.dbPath = filePath
+      havePermission = await SqlLite.getUniqueCol(config);
+    } 
+    res.status(200).send({
+      status: havePermission ? 1 :0,
+    });
+  }catch (e) {
+    console.log(e,'eee')
+    required_col.push(output_table_info.dbTable)
+  }
+}
 exports.checkUNiqueColumns = async function (req, res) {
   var functions = req.body.functions;
   var tables_information = req.body.tables
