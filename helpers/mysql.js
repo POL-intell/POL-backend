@@ -72,7 +72,7 @@ exports.getTablesListOfDatabase = async function (config) {
         makeConnection(config).then((db) => {
             // console.log(db, 'connection mysql')
             if (db) {
-                var q = "SELECT table_name FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = '" + config.database + "'";
+                var q = "SELECT table_name, table_rows FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = '" + config.database + "'";
 
                 db.connection.query(q, function (error, results, fields) {
                     // console.log(q,'here in hhh')
@@ -104,6 +104,7 @@ exports.getTablesListOfDatabase = async function (config) {
 
     });
 }
+
 //get and return if there is some unique,primary etc column exist or not
 exports.getUniqueCol = async function (config, table) {
 
@@ -253,30 +254,45 @@ exports.checkPrivilige = async function(config,table){
         console.log("config",config)
         makeConnection(config).then((db) =>{
             if(db && db.status ==1){
-                let q = `SELECT * FROM mysql.db WHERE USER = "${config.username}" AND Update_priv = 'Y' AND DB= "${config.database}"`
-                db.connection.query(q, function (error, results) {
-                    if (error) {
-                        reject({status:0})
-                    } else {
-                        if(results.length > 0){
-                            resolve(1)
+                let q1 = `SELECT * FROM mysql.user WHERE USER = "${config.username}" AND Update_priv = 'Y' AND DB= "${config.database}"`
+                db.connection.query(q1, function (error, results) {
+                    if(error){
+                        console.log("error",error)
+                        resolve({status:0}) 
+                    }else{
+                        if(results.length>0){
+                            resolve({status:1})
                         }else{
-                        db.connection.query(`SELECT Table_priv FROM mysql.tables_priv WHERE USER = "${config.username}" AND DB= "${config.database}" AND TABLE_NAME = ${table}`
-                        , function (error, results) {
-                            if (error) {
-                                reject({status:0})
-                            } else {
-                                const array = results[0].Table_priv.split(',')                                
-                                if(array.includes('Update')){
-                                    resolve({status:1})
-                                }else{
+                            let q2= `SELECT * FROM mysql.db WHERE USER = "${config.username}" AND Update_priv = 'Y' AND DB= "${config.database}"`
+                            db.connection.query(q2, function (error, results) {
+                                if (error) {
                                     reject({status:0})
+                                } else {
+                                    if(results.length > 0){
+                                        resolve({status:1})
+                                    }else{
+                                    db.connection.query(`SELECT Table_priv FROM mysql.tables_priv WHERE USER = "${config.username}" AND DB= "${config.database}" AND TABLE_NAME = ${table}`
+                                    , function (error, results) {
+                                        if (error) {
+                                            reject({status:0})
+                                        } else {
+                                            const array = results[0].Table_priv.split(',')                                
+                                            if(array.includes('Update')){
+                                                resolve({status:1})
+                                            }else{
+                                                reject({status:0})
+                                            }
+                                        }
+                                    });
+                                    }
                                 }
-                            }
-                        });
+                            });
                         }
                     }
-                });
+                    
+                })
+
+              
             }else{
                 reject(0)
             }
