@@ -50,13 +50,15 @@ const newRegistrationEmail = async (userEmail,planName)=>{
      
         return {status:true}
     }catch(err){
-        console.log("Error insdie sendForgotPasswordEmail",err)
+        console.log("Error insdie newRegistrationEmail",err)
         return {status:false}
     }
 }
 
 const encryptData = async (data) => {
     try {
+        // const aesKey = CryptoJS.enc.Utf8.parse(process.env.AESKEY);
+        // const aesIv = CryptoJS.enc.Utf8.parse(process.env.AESKEY);
         const aesKey = CryptoJS.enc.Utf8.parse('aeskeyaeskeyaeskeyaeskeyaeskey32');
         const aesIv = CryptoJS.enc.Utf8.parse('0123456789abcdef');
         const aesOptions = {
@@ -76,11 +78,17 @@ const encryptData = async (data) => {
 };
 
 const sendMail = async(userEmail, subject, html_template) =>{
-    const info = await transporter.sendMail({
-        from: '"POL" <sahils.mvteams@gmail.com>', 
-        to: userEmail, 
-        subject:subject,
-        html: html_template, 
-    });
+    try{
+        console.log("transporter",transporter)
+        const info = await transporter.sendMail({
+            from: '"POL" <sahils.mvteams@gmail.com>', 
+            to: userEmail, 
+            subject:subject,
+            html: html_template, 
+        });
+    }catch(err){
+        console.log("Error inside sendMail",err)
+    }
+   
 }
 module.exports = {sendForgotPasswordEmail,newRegistrationEmail}

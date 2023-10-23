@@ -168,7 +168,7 @@ const transporter = nodemailer.createTransport({
     port: 587,
     auth: {
         user: 'sahils.mvteams@gmail.com',
-        pass: 'hrnktvybfencntft'
+        pass: 'xqrwwctsfckfjcxz'
     }
 });
  
