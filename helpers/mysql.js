@@ -131,7 +131,7 @@ exports.getUniqueCol = async function (config, table) {
 }
 
 exports.getTableData = async function (config, table) {
-
+    console.log("in mysql")
     return new Promise(async (resolve, reject) => {
         makeConnection(config).then((db) => {
             var data = [];
@@ -254,7 +254,7 @@ exports.checkPrivilige = async function(config,table){
         console.log("config",config)
         makeConnection(config).then((db) =>{
             if(db && db.status ==1){
-                let q1 = `SELECT * FROM mysql.user WHERE USER = "${config.username}" AND Update_priv = 'Y' AND DB= "${config.database}"`
+                let q1 = `SELECT * FROM mysql.user WHERE USER = "${config.username}" AND Update_priv = 'Y'`
                 db.connection.query(q1, function (error, results) {
                     if(error){
                         console.log("error",error)
@@ -397,7 +397,6 @@ exports.checkTableExistence = async function (dbDetails, tableName) {
     });
 }
 
-
 exports.checkColumnExistence = async function(dbDetails,tableName,columnName){
     return new Promise((resolve, reject) => {
         makeConnection(dbDetails)
@@ -429,7 +428,6 @@ exports.checkColumnExistence = async function(dbDetails,tableName,columnName){
             });
     });
 }
-
 
 exports.createColumn = async function (dbDetails, tableName, columnName) {
     return makeConnection(dbDetails)
