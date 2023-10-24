@@ -1,5 +1,7 @@
 const Emails = require("../models/Emails");
 const User = require("../models/User");
+const apiKey = process.env.BREVO_API_KEY;
+const apiUrl = process.env.BREVO_API_URL;
 const {transporter,replaceEmailConstantsWithValues}  = require("../utils/index")
 // const crypto = require ("crypto");
 const CryptoJS = require('crypto-js');
@@ -77,18 +79,55 @@ const encryptData = async (data) => {
     }
 };
 
-const sendMail = async(userEmail, subject, html_template) =>{
-    try{
-        console.log("transporter",transporter)
-        const info = await transporter.sendMail({
-            from: '"POL" <sahils.mvteams@gmail.com>', 
-            to: userEmail, 
-            subject:subject,
-            html: html_template, 
-        });
-    }catch(err){
-        console.log("Error inside sendMail",err)
-    }
+// const sendMail = async(userEmail, subject, html_template) =>{
+//     try{
+//         console.log("transporter",transporter)
+//         const info = await transporter.sendMail({
+//             from: '"POL" <sahils.mvteams@gmail.com>', 
+//             to: userEmail, 
+//             subject:subject,
+//             html: html_template, 
+//         });
+//     }catch(err){
+//         console.log("Error inside sendMail",err)
+//     }
    
+// }
+
+
+const sendMail = async(userEmail, subject, html_template) =>{
+    const emailData = {
+        sender: {
+          name: 'Pol Intel',
+          email: 'no-reply@pol-intell.com'
+        },
+        to: [
+          {
+            email: userEmail,
+          }
+        ],
+        subject:subject,
+        htmlContent: html_template
+      };
+      fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'api-key': apiKey
+        },
+        body: JSON.stringify(emailData)
+      })
+      .then(response => response.json())
+      .then(data => {
+        console.log('Email sent successfully:', data);
+      })
+      .catch(error => {
+        console.error('Error sending email:', error);
+      });
 }
+
+
+
+
 module.exports = {sendForgotPasswordEmail,newRegistrationEmail}
