@@ -13,7 +13,7 @@ exports.createConnection = async function (config) {
     return new Promise((resolve, reject) => {
         console.log("dbConnection:>>>",dbConnection)
         if(!dbConnection){
-            dbConnection =  new sqlite3.Database(config.dbPath, (err) => {
+            dbConnection =  new sqlite3.Database(config.dbPath,sqlite3.OPEN_READWRITE, (err) => {
                 if (err) {
                     console.log(err, 'err here')
                     reject({
@@ -47,7 +47,7 @@ async function makeConnection(config) {
     console.log("In makeconnection")
     config.dbPath = filePath
     return new Promise((resolve, reject) => {
-        dbConnection =  new sqlite3.Database(config.dbPath, sqlite3 , (err) => {
+        dbConnection =  new sqlite3.Database(config.dbPath, sqlite3.OPEN_READWRITE , (err) => {
             if (err) {
                 console.log(err, 'err here')
                 reject({
