@@ -1,7 +1,7 @@
 const { Pool, Client } = require('pg')
-const stream = require('stream');
 const QueryStream = require('pg-query-stream')
 const BatchStream = require('batch-stream');
+const { resolveHostname } = require('nodemailer/lib/shared');
 
 //create connection to database by host,user,password and database. For this mysql2 package is used tomake connection to mysql 
 exports.createConnection = async function (config) {
@@ -21,7 +21,6 @@ exports.createConnection = async function (config) {
 
         client.connect()
             .then(() => {
-                console.log('here done post')
                 resolve({
                     connection: client,
                     status: 1
@@ -47,7 +46,6 @@ exports.createConnection = async function (config) {
 
 
     }).catch(error => {
-
         console.log('err post')
     });
 
@@ -63,21 +61,18 @@ async function makeConnection(config) {
     }
 
 
-
     return new Promise((resolve, reject) => {
 
         const client = new Client(payload)
 
         client.connect()
             .then(() => {
-                console.log('here')
                 reject({
                     message: err,
                     status: 0
                 });
             })
             .catch(err => {
-                console.log('here done')
                 resolve({
                     connection: client,
                     status: 1
@@ -87,7 +82,6 @@ async function makeConnection(config) {
 
 
     }).catch(error => {
-
         console.log('err post')
     });
 }
@@ -148,14 +142,14 @@ exports.getUniqueCol = async function (config, table) {
                         if (results.length > 0) {
                             var cols = results.map((e) => e.column_name)
                             console.log(cols, 'colscols')
-                            resolve({ cols: cols })
+                            resolve({ cols: cols, status:1 })
                         } else {
-                            reject(0)
+                            reject({status:0})
                         }
                     });
 
             } else {
-                reject(0)
+                reject({status:0})
             }
         });
     });
@@ -168,9 +162,12 @@ exports.getTableData = async function (config, table) {
             if (db && db.status == 1) {
                 const batchSize = 50000; // process two rows at a time
                 const batchStream = new BatchStream({ size: batchSize });
+                const tableName = table;
 
-                const query = new QueryStream('SELECT * FROM ' + table)
-                const stream = db.connection.query(query)
+                // Safely construct the query using string interpolation
+                const query = `SELECT * FROM "${tableName}"`;
+                const queryStream = new QueryStream(query);
+                const stream = db.connection.query(queryStream)
 
                 stream.on('data', (row) => {
                    // console.log(row)
@@ -261,3 +258,165 @@ exports.addPolColumn = async function (config, table) {
         });
     });
 }
+
+
+exports.checkPrivilige = async function(config,table){
+    return new Promise((resolve,reject)=>{
+        console.log("config",config)
+        makeConnection(config).then((db) =>{
+            if(db && db.status ==1){
+                let q = `SELECT COUNT(*) FROM information_schema.role_table_grants WHERE grantee=$1 AND privilege_type=$2 AND table_catalog=$3 AND is_grantable=$4 AND table_name =$5;`
+                db.connection.query(q, function (error, results) {
+                    if (error) {
+                        reject({status:0})
+                    } else {
+                       console.log("results",results)
+                    //    resolve({status:1})
+                    }
+                });
+            }else{
+                reject(0)
+            }
+        })
+    })
+}
+
+
+exports.createResultTable = function (dbDetails, tableName, totalRows, columnName) {
+    return new Promise((resolve, reject) => {
+        makeConnection(dbDetails)
+            .then((client) => {
+                if (client) {
+                    const createTableQuery = `CREATE TABLE "${tableName}" (pol SERIAL PRIMARY KEY, "${columnName}" VARCHAR(255));`
+
+                    client.connection.query(createTableQuery, (createTableError, createTableResult) => {
+                        if (createTableError) {
+                            reject({ status: 0, error: createTableError });
+                        } else {
+
+                        const batchSize = 5000;
+                        const totalBatches = Math.ceil(totalRows / batchSize);
+                        console.log("totalBatches", totalBatches);
+                        const insertQueries = Array.from({ length: totalBatches }, (_, index) => {
+                            const start = index * batchSize + 1;
+                            const end = Math.min(start + batchSize - 1, totalRows);
+                            return `INSERT INTO "${tableName}" ("${columnName}") VALUES ${Array.from({ length: end - start + 1 }, (_, i) => `(NULL)`)
+                                .join(',')};`;
+                        });
+
+                        let insertionPromises = insertQueries.map((query) => {
+                            return new Promise((resolve, reject) => {
+                                client.connection.query(query, function (insertError, insertResult) {
+                                    if (insertError) {
+                                        reject(insertError);
+                                    } else {
+                                        resolve(insertResult);
+                                    }
+                                });
+                            });
+                        });
+
+                            Promise.all(insertionPromises)
+                                .then(() => {
+                                    client.connection.query('COMMIT', (commitError) => {
+                                        if (commitError) {
+                                            reject({ status: 0, error: commitError });
+                                        } else {
+                                            resolve({ status: 1, message: 'Table created and rows inserted successfully.' });
+                                        }
+                                    });
+                                })
+                                .catch((error) => {
+                                    client.connection.query('ROLLBACK', () => {
+                                        reject({ status: 0, error: error });
+                                    });
+                                });
+                        }
+                    });
+                } else {
+                    reject({ status: 0, message: 'Failed to establish database connection.' });
+                }
+            })
+            .catch((error) => {
+                reject({ status: 0, error: error });
+            });
+    });
+};
+
+
+exports.checkTableExistence = async function(dbDetails, tableName){
+    return new Promise((resolve,reject)=>{
+        makeConnection(dbDetails).then((client) => {
+            // const checkTableQuery = `SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = $1;`
+            const checkTableQuery = `SELECT COUNT(*) FROM information_schema.tables WHERE table_name = $1;`
+
+            const params = [tableName];
+            client.connection.query(checkTableQuery,params, (err, result) => {
+                if (err) {
+                    reject({status:0});
+                } else {
+                    console.log("result",result,typeof parseInt(result.rows[0].count))
+                    if(parseInt(result.rows[0].count)>0){
+                        resolve({status:1});
+                    }else{
+                        reject({status:0})
+                    }
+                }
+            });
+        })
+    })
+}
+
+
+
+
+exports.checkColumnExistence = async function(dbDetails, tableName, columnName) {
+    return new Promise((resolve, reject) => {
+        makeConnection(dbDetails).then(async (client) => {
+            const checkTableQuery = `SELECT COUNT(*) FROM information_schema.columns WHERE table_catalog = $1 AND table_name = $2 AND column_name = $3;`;
+            const params = [dbDetails.database,tableName,columnName];
+            console.log("dbDetails.database",params)
+
+            client.connection.query(checkTableQuery, params, (err, result) => {
+                if (err) {
+                    console.log("error here in checkColumnExistence", err);
+                    reject(err);
+                } else {
+                    console.log("result",result,typeof parseInt(result.rows[0].count),parseInt(result.rows[0].count)>0)
+
+                    if(parseInt(result.rows[0].count)>0){
+                        console.log("in if")
+                        resolve({status:1});
+                    }else{
+                        console.log("in else")
+                        reject({status:0})
+                    }
+                }
+            });
+        })
+        .catch((error) => {
+            reject({ status: 0 });
+        });
+    });
+};
+
+
+
+exports.createColumn = async function (dbDetails, tableName, columnName) {
+    return new Promise((resolve,reject)=>{
+        makeConnection(dbDetails).then(async (client) => {
+            await client.connection.query('BEGIN');
+
+            const createColumnStmt = `ALTER TABLE ${tableName} ADD COLUMN ${columnName} TEXT DEFAULT NULL;`;
+
+            await client.connection.query(createColumnStmt);
+            await client.connection.query('COMMIT');
+
+            resolve ({ status: 1});
+        })
+        .catch((error) => {
+            reject({ status: 0});
+        });
+    })
+      
+};

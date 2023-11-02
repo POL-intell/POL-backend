@@ -10,7 +10,7 @@ const registerUser = async (userDetails)=>{
         const first_thousand = count < 1000 ? 1 : 0
         const existusername = await User.where({ 'username': userDetails.username }).count();
         if (existusername > 0) {
-            return{message: "Username is already registed.",status: false};
+            return{message: "Username is already registered.",status: false};
         }
     
         const existEmail = await User.where({ email: userDetails.email }).count();
@@ -168,7 +168,7 @@ const transporter = nodemailer.createTransport({
     port: 587,
     auth: {
         user: 'sahils.mvteams@gmail.com',
-        pass: 'hrnktvybfencntft'
+        pass: 'xqrwwctsfckfjcxz'
     }
 });
  

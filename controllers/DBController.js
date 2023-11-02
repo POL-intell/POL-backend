@@ -4,14 +4,21 @@ var router = express.Router();
 var DBHelper = require('../helpers/db');
 const stream = require('stream');
 const { createPool } = require('mysql2');
-
 var MySQl = require('../helpers/mysql');
 var PostgreSQL = require('../helpers/postgres');
-
+const SqlLite = require('../helpers/sqlite');
+// const path = require('path')
+// let desktop = require('os').homedir()
+// console.log("desktop>>>",desktop)
+// const currentDirectory = __dirname;
+// const filePath = path.join(currentDirectory, './sqlite-sakila.db');
 /**Add database and create connection to check id DB is connectting or not*/
 exports.addDatabase = async function (req, res) {
   
   var data = req.body
+  // const filePath = path.join(desktopPath, '/Desktop/sqlite-sakila.db');
+  
+  // data.dbPath = filePath
   var connection = await DBHelper.createConnection(data);
 
   if (connection && connection.status == 1) {
@@ -31,12 +38,11 @@ exports.addDatabase = async function (req, res) {
 
 /**Get the table slist from database details*/
 exports.getTables = async function (req, res) {
-
+  
   var data = req.body
 
   if (data.type == 'PostgreSQL') {
     var result = await PostgreSQL.getTablesListOfDatabase(data)
-
     res.status(200).send({
       status: 1,
       data: result.result
@@ -48,7 +54,15 @@ exports.getTables = async function (req, res) {
       status: 1,
       data: result.result
     });
-  } else {
+  }else if (data.type == 'SQLite') {
+    // const filePath = path.join(desktopPath, '/Desktop/sqlite-sakila.db');
+    // data.dbPath = filePath
+    var result = await SqlLite.getTablesListOfDatabase(data)
+    res.status(200).send({
+      status: 1,
+      data: result.result
+    });
+  }else {
     res.status(500).send({
       message: "Wrong DB Type",
       status: 0
@@ -57,31 +71,6 @@ exports.getTables = async function (req, res) {
 
 };
 
-
-/**get the table slist from database details*/
-// exports.listTables = async function (req, res) {
-//   let { db_id } = req.params;
-//   let db = await Database.where({ 'id': db_id }).fetch();
-//   db = db.toJSON();
-//   var DB = await DBHelper.createConnection(db);
-
-
-//   let connection = DB.connection;
-//   connection.query("SELECT table_name, table_rows FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = " + db.database, function (error, results, fields) {
-//     if (error) {
-//       res.status(500).send({
-//         message: error,
-//         status: 0
-//       });
-//     } else {
-//       res.status(200).send({
-//         status: 1,
-//         data: results
-//       });
-//     }
-//   });
-//   connection.end();
-// }
 
 /**get the meta data of table*/
 exports.getMetaData = async function (req, res) {
@@ -96,6 +85,14 @@ exports.getMetaData = async function (req, res) {
       });
     } else if (data.type == 'MySQL') {
       var uniqueCall = await MySQl.getUniqueCol(req.body, table);
+      res.status(200).send({
+        status: 1,
+      });
+    }
+    else if (data.type == 'SQLite') {
+      // const filePath = path.join(desktopPath, '/Desktop/sqlite-sakila.db');
+      // data.dbPath = filePath
+      var uniqueCall = await SqlLite.getUniqueCol(req.body, table);
       res.status(200).send({
         status: 1,
       });
@@ -131,7 +128,13 @@ exports.getTableData = async function (req, res) {
         });
       } else if (data.type == 'MySQL') {
         var results = await MySQl.getTableData(data, table);
-        console.log('comes here ')
+        res.status(200).send({
+          status: 1,
+          data: results
+        });
+      }else if (data.type == 'SQLite') {
+        // data.dbPath = filePath
+        var results = await SqlLite.getTableData(data, table);
         res.status(200).send({
           status: 1,
           data: results
@@ -155,65 +158,10 @@ exports.getTableData = async function (req, res) {
         return;
       }
 
-  // let { table } = req.params;
-  // var db = req.body;
-  // var from = 0;
-  // if (req.body.from) {
-  //   from = req.body.from;
-  // }
-  // var to = 20;
-  // if (req.body.to) {
-  //   to = req.body.to;
-  // }
-  // if (req.body.dbDetails) {
-  //   db = req.body.dbDetails;
-  // }
 
-
-  // var DB = DBHelper.makeConnections(db);
-  // DB.then((result) => {
-  //   var connection = result.connection;
-  //   var data = [];
-  //   console.log("SELECT * from `" + table + "` LIMIT " + from + " , " + to + " ")
-  //   connection.query("SELECT * from " + table)
-  //     .on('error', function (err) {
-  //       // Do something about error in the query
-  //     })
-  //     .stream()
-  //     .pipe(new stream.Transform({
-  //       objectMode: true,
-  //       transform: function (row, encoding, callback) {
-  //         console.log(row, 'row')
-  //         if (data.length == 0) {
-  //           // res.write('{"status":1,"data":['+JSON.stringify(row));
-  //         } else {
-  //           // res.write(","+JSON.stringify(row));
-
-  //         }
-  //         data.push(row);
-  //         callback();
-
-  //       }
-  //     }))
-  //     .on('finish', function () {
-  //       //res.write("]}");
-
-  //       connection.end();
-  //       // res.end()
-  //       res.send({ status: 1, data: data });
-  //     });
-
-  // }).catch((error) => {
-  //   console.log(error, 'error')
-  //   res.status(500).send({
-  //     message: error,
-  //     status: 0
-  //   });
-  // })
 }
 /**get the sql result of a table*/
 exports.getSqlData = async function (req, res) {
-
   var data = req.body.dbDetails;
   var {sql} = req.body
   try {
@@ -225,6 +173,13 @@ exports.getSqlData = async function (req, res) {
     });
   } else if (data.type == 'MySQL') {
     var results = await MySQl.getSqlData(data,sql);
+    res.status(200).send({
+      status: 1,
+      data: results
+    });
+  }else if (data.type == 'SQLite') {
+    // data.dbPath = filePath
+    var results = await SqlLite.getSqlData(data, sql);
     res.status(200).send({
       status: 1,
       data: results
@@ -364,9 +319,6 @@ exports.addPolColumn = async function (req, res) {
 exports.addPolColumns = async function (req, res) {
   var functions = req.body.functions;
 
-
-
-
   for (var f = 0; f < functions.length; f++) {
       var fn = functions[f];
       var output_table_info = functions[f].table;
@@ -389,5 +341,154 @@ exports.addPolColumns = async function (req, res) {
     }
   }
 }
+
+exports.addColumn = async function (req, res) {
+  const {dbDetails, dbTable} = req.body
+  try {
+
+    var result = await DBHelper.addPolColumn(dbDetails, dbTable);
+    res.status(200).send({
+      status: 1,
+      message: 'Pol column added successfully.'
+    });
+
+  }catch (e) {
+
+    res.status(200).send({
+      status: 0,
+      message: 'Something went wrong while adding column'
+    });
+  }
+}
+exports.checkUniqueCol = async function(req,res){
+  const {dbDetails, dbTable} = req.body
+  try{
+    if (dbDetails.type == 'PostgreSQL') {
+      await PostgreSQL.getUniqueCol(dbDetails, dbTable)
+    }else if (dbDetails.type == 'MySQL') {
+      await MySQl.getUniqueCol(dbDetails, dbTable)
+    }else if (dbDetails.type == 'SQLite') {
+      await SqlLite.getUniqueCol(dbDetails, dbTable)
+    }
+    return res.status(200).send({
+      status:1,
+    })
+  }catch(err){
+    console.log("Error",err)
+    let message = dbDetails.type == 'SQLite' ? 'POL requires a unique column type to perform a commit operation. To create a result table for SQLite, click the “Result Table” button' : 'POL requires a unique column type to perform a commit\\save operation. Click the “OK” button to automatically create the unique column or click the “Result Table” button.'
+    try{
+      console.log("Inside try")
+      if (dbDetails.type == 'PostgreSQL') {
+        await PostgreSQL.checkPrivilige(dbDetails, dbTable)
+      }else if (dbDetails.type == 'MySQL') {
+        await MySQl.checkPrivilige(dbDetails, dbTable)
+      }else if (dbDetails.type == 'SQLite') {
+        return res.status(200).send({
+          status:0,
+          permission:0,
+          message:message
+        })
+      }
+      return res.status(200).send({
+        status:0,
+        permission:1,
+        message:message
+      })
+    }catch(err){
+      console.log("Inside catch")
+      return res.status(200).send({
+        status:0,
+        permission:0,
+        message:message
+      })
+    }
+  }
+}
+
+exports.createResultTable = async function(req,res){
+  const {dbDetails, tableName, totalRows, columnName} = req.body
+  console.log("req.body",req.body)
+  try{
+    if (dbDetails.type == 'PostgreSQL') {
+      await PostgreSQL.checkTableExistence(dbDetails, tableName)
+    }else if (dbDetails.type == 'MySQL') {
+      await MySQl.checkTableExistence(dbDetails, tableName)
+    }else if (dbDetails.type == 'SQLite') {
+      await SqlLite.checkTableExistence(dbDetails, tableName)
+    }  
+
+    return res.status(200).send({
+      status:0,
+      message:"Table already exist"
+    })
+  
+  }catch(err){
+    console.log("Errorr")
+    try{
+      if (dbDetails.type == 'PostgreSQL') {
+        await PostgreSQL.createResultTable(dbDetails, tableName, totalRows, columnName)
+      }else if (dbDetails.type == 'MySQL') {
+        console.log("here")
+        await MySQl.createResultTable(dbDetails, tableName, totalRows, columnName)
+      }else if (dbDetails.type == 'SQLite') {
+        await SqlLite.createResultTable(dbDetails, tableName, totalRows, columnName)
+      }  
+      return res.status(200).send({
+        status:1,
+        message:"Table created successfully"
+      })
+    }catch(err){
+      console.log("error",err)
+      return res.status(200).send({
+        status:0,
+        message:"Something went wrong"
+      })
+    }
+  }
+}
+
+
+exports.createResultColumn = async function(req,res){
+  const {tableName,dbDetails,columnName} = req.body
+  try{
+    if (dbDetails.type == 'PostgreSQL') {
+      await PostgreSQL.checkColumnExistence(dbDetails,tableName, columnName)
+    }else if (dbDetails.type == 'MySQL') {
+      await MySQl.checkColumnExistence(dbDetails,tableName, columnName)
+    }else if (dbDetails.type == 'SQLite') {
+      await SqlLite.checkColumnExistence(dbDetails,tableName, columnName)
+    }  
+
+    return res.status(200).send({
+      status:0,
+      message:"Column already exist"
+    })
+  
+  }catch(err){
+    console.log("err",err)
+    try{
+      if (dbDetails.type == 'PostgreSQL') {
+        await PostgreSQL.createColumn(dbDetails, tableName, columnName )
+      }else if (dbDetails.type == 'MySQL') {
+        await MySQl.createColumn(dbDetails, tableName, columnName )
+      }else if (dbDetails.type == 'SQLite') {
+        await SqlLite.createColumn(dbDetails, tableName, columnName )
+      }  
+      return res.status(200).send({
+        status:1,
+        message:"Column created successfully"
+      })
+    }catch(error){
+      console.log("error",error)
+      return res.status(200).send({
+        status:0,
+        message:"Something went wrong"
+      })
+    }
+  }
+
+}
+
+
 
 

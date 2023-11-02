@@ -3,7 +3,10 @@ const stream = require('stream');
 const { createPool } = require('mysql2');
 var MySQl = require('./mysql');
 var PostgreSQL = require('./postgres');
-
+const SqlLite = require('./sqlite')
+// const path = require('path')
+// const currentDirectory = __dirname;
+// const filePath = path.join(currentDirectory, '../controllers/sqlite-sakila.db');
 //create connection to database by host,user,password and database. For this mysql2 package is used tomake connection to mysql 
 exports.createConnection = async function (config) {
 	return new Promise((resolve, reject) => {
@@ -45,7 +48,25 @@ exports.createConnection = async function (config) {
 
 				}
 			});
-		} else {
+		}else if(config.type == 'SQLite'){
+			console.log("config on connection",config)
+			SqlLite.createConnection(config).then((connection)=>{
+				if (connection) {
+					console.log('connection success ')
+					resolve({
+						connection: connection.connection,
+						status: 1
+					});
+				} else {
+					//console.log('here reject')
+					reject({
+						message: "error",
+						status: 0
+					});
+
+				}
+			})
+		}else {
 			console.log('no one ')
 
 		}
@@ -96,6 +117,23 @@ async function makeConnection(config) {
 
 				}
 			});
+		}else if(config.type == 'SQLite'){
+			SqlLite.createConnection(config).then((connection)=>{
+				if (connection) {
+					//console.log('connection here also ')
+					resolve({
+						connection: connection.connection,
+						status: 1
+					});
+				} else {
+					//console.log('here reject')
+					reject({
+						message: "error",
+						status: 0
+					});
+
+				}
+			})
 		} else {
 			console.log('no one ')
 
@@ -178,7 +216,12 @@ exports.addPolColumn = async function (data, table) {
 		  } else if (data.type == 'MySQL') {
 			var uniqueCall = await MySQl.addPolColumn(data, table);
 			resolve(uniqueCall)
-		  } else {
+		  }  else if (data.type == 'SQLite') {
+			// data.dbPath = filePath
+			var uniqueCall = await SqlLite.addPolColumn(data, table);
+			resolve(uniqueCall)
+		  } 
+		  else {
 			reject(0)
 			
 		  }
@@ -193,7 +236,6 @@ exports.getTableResultSet = async function (config, no_of_rows = null) {
 	var data = config.dbDetails
 	var table = config.dbTable
 	var datalink = config.dataLinkDetail
-	console.log(config,'config UU U ')
 	return new Promise(async (resolve, reject) => {
 
 		if(table!=''){
@@ -203,6 +245,11 @@ exports.getTableResultSet = async function (config, no_of_rows = null) {
 				resolve({ results: results, fields: config.fields })
 			} else if (data.type == 'MySQL') {
 				var results = await MySQl.getTableData(data, table);
+				resolve({ results: results, fields: config.fields })
+			} 
+			else if (data.type == 'SQLite') {
+				// data.dbPath = filePath
+				var results = await SqlLite.getTableData(data, table);
 				resolve({ results: results, fields: config.fields })
 			} else {
 				reject(0)
@@ -214,7 +261,12 @@ exports.getTableResultSet = async function (config, no_of_rows = null) {
 			  } else if (data.type == 'MySQL') {
 				var results = await MySQl.getSqlData(data, datalink.sql);
 				resolve({ results: results, fields: config.fields })
-			  } else {
+			  }
+			  else if (data.type == 'SQLite') {
+				// data.dbPath = filePath
+				var results = await SqlLite.getSqlData(data, datalink.sql);
+				resolve({ results: results, fields: config.fields })
+			  }else {
 				reject(0)
 				
 			  }
@@ -226,7 +278,7 @@ exports.getTableResultSet = async function (config, no_of_rows = null) {
 
 // //get and return if there is some unique,primary etc column exist or not
 exports.getUniqueCol = async function (data, table) {
-
+	console.log("hereeee")
 	return new Promise(async (resolve, reject) => {
 		
 		if (data.type == 'PostgreSQL') {
@@ -235,6 +287,10 @@ exports.getUniqueCol = async function (data, table) {
 			resolve(uniqueCall)
 		  } else if (data.type == 'MySQL') {
 			var uniqueCall = await MySQl.getUniqueCol(data, table);
+			resolve(uniqueCall)
+		  } 
+		  else if (data.type == 'SQLite') {
+			var uniqueCall = await SqlLite.getUniqueCol(data, table);
 			resolve(uniqueCall)
 		  } else {
 			reject(0)

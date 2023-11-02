@@ -975,6 +975,7 @@ exports.registerWithPaidPlan = async function(req,res){
                     status: 1
                 });
             }else{
+                await User.where({ 'ID': response.ID }).destroy();
                 res.status(200).send({
                     message: "Something went wrong.",
                     status: 0
