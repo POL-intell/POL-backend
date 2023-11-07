@@ -71,11 +71,11 @@ const checkDiscount = async(user)=>{
                let user_coupon = await Discount.where({ 'is_active': 1 , 'type' : 'user_specific', 'user_id':user.ID}).fetch();
                return {status:true,coupon:user_coupon.toJSON()}
            }else{
-               let count = await Discount.where({ 'is_active': 1 , 'type' : 'general'}).count();
-               if(count>0){
-                   let user_coupon = await Discount.where({ 'is_active': 1 , 'type' : 'general'}).fetch();
-                   return {status:true,coupon:user_coupon.toJSON()} 
-               }
+            //    let count = await Discount.where({ 'is_active': 1 , 'type' : 'general'}).count();
+            //    if(count>0){
+            //        let user_coupon = await Discount.where({ 'is_active': 1 , 'type' : 'general'}).fetch();
+            //        return {status:true,coupon:user_coupon.toJSON()} 
+            //    }
                return {status:false}
            }
        }catch(err){
@@ -85,7 +85,7 @@ const checkDiscount = async(user)=>{
    }
    
 const createAndUpdateCustomerStripe = async(user,discountObj,stripeToken,card_src,amount_paid)=>{
-       try{
+    try{
            if(user.customer_id === null){
                let customer;
                if(discountObj?.status){
@@ -137,7 +137,7 @@ const createAndUpdateCustomerStripe = async(user,discountObj,stripeToken,card_sr
            }
        }catch(err){
            console.log("Error in createAndUpdateCustomerStripe",err)
-           return {status : false}
+           return {status : false, isCustomerUpdated: user.customer_id === null ? false : true}
        }
       
 }
@@ -188,44 +188,44 @@ async function replaceEmailConstantsWithValues(template, constants, data) {
 }
   
 function isOneDayOrLessLeft(targetTime) {
-const currentTime = new Date().getTime();
-const differenceInTime = targetTime - currentTime;
+    const currentTime = new Date().getTime();
+    const differenceInTime = targetTime - currentTime;
 
-// Calculate the number of milliseconds in one day
-const oneDayMilliseconds = 24 * 60 * 60 * 1000;
+    // Calculate the number of milliseconds in one day
+    const oneDayMilliseconds = 24 * 60 * 60 * 1000;
 
-// Check if the difference is less than or equal to one day
-if (differenceInTime <= oneDayMilliseconds) {
-    return true;
-} else {
-    return false;
-}
+    // Check if the difference is less than or equal to one day
+    if (differenceInTime <= oneDayMilliseconds) {
+        return true;
+    } else {
+        return false;
+    }
 }
   
 const updatePerMinuteQuantity = async function(data){
-try{
-    await delay(1000)
-    let subscription = await stripe.subscriptions.retrieve(
-        data.subscripton_id
-    );
-    const per_minute_item = subscription.items.data.find(item => item.price.id === data.per_minute_price_id);
+    try{
+        await delay(1000)
+        let subscription = await stripe.subscriptions.retrieve(
+            data.subscripton_id
+        );
+        const per_minute_item = subscription.items.data.find(item => item.price.id === data.per_minute_price_id);
 
-    await stripe.subscriptionItems.update(
-        per_minute_item.id,
-        {
-        quantity : data.per_minute_quantity,
-        proration_behavior: 'none'
-        }
-    );  
-    await User.where({ 'ID': data.userId }).save({
-        'used': 0,
-    }, { patch: true });
-    // return {status: true}
-}catch(err){
-    console.log("Error in updatePerMinuteQuantity",err)
-    // return {status: false}
-    // return
-}
+        await stripe.subscriptionItems.update(
+            per_minute_item.id,
+            {
+            quantity : data.per_minute_quantity,
+            proration_behavior: 'none'
+            }
+        );  
+        await User.where({ 'ID': data.userId }).save({
+            'used': 0,
+        }, { patch: true });
+        // return {status: true}
+    }catch(err){
+        console.log("Error in updatePerMinuteQuantity",err)
+        // return {status: false}
+        // return
+    }
 }
 const delay = ms => new Promise(res => setTimeout(res, ms));
 

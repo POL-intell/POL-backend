@@ -278,10 +278,10 @@ exports.fetchActiveCoupon= async function(req,res){
 exports.updatePlanPrice = async function(req,res){
     try{
         const data = req.body
+        console.log("data",data)
         data.forEach(async (element) => {
             let plan
-            if(req.params?.activeTab === "1"){
-               
+            if(req.params?.activeTab === "1"){ 
                 // plan = await Plans_for_thousands.where({'id' : element.id}).fetch()
                 plan =  await NewPlans.where({'id' : element.id}).fetch({ withRelated: [{'plans_pricing': (qb) => {
                     qb.where('for_thousand', 1)
@@ -296,7 +296,6 @@ exports.updatePlanPrice = async function(req,res){
             const price = element.price % 1 != 0 ? parseFloat(element.price) : parseInt(element.price)
             if(plan[element.type] !== price){
                 let newPlanPrice = await createNewPlanPrice(element,plan)
-
                 if(newPlanPrice.status){
                     let updated_plan  = await updatePlan(element,price,newPlanPrice.price,req.params?.activeTab)
                     if(updated_plan.status){
@@ -326,9 +325,11 @@ exports.updatePlanPrice = async function(req,res){
 const createNewPlanPrice = async(dataObj,plan)=>{
 
     try{
+        console.log(dataObj,plan)
         const priceInCents = dataObj.price * 100 
-        const interval = dataObj?.monthly_per_app || dataObj?.monthly_5_app || dataObj?.user_per_min ? 'month' : 'year'
-        const tiers_mode = dataObj.user_per_min ? "graduated" : "volume"
+        const interval = (dataObj?.type  === "monthly_per_app" || dataObj?.type === "monthly_5_app" || dataObj?.type === "user_per_min" )? 'month' : 'year'
+        console.log("interval",interval)
+        const tiers_mode = dataObj.type === "user_per_min" ? "graduated" : "volume"
         const  getTiersArray = await createTiersArray(dataObj,priceInCents,plan)
         let new_price = await stripe.prices.create({
                 currency: 'usd',
@@ -338,7 +339,7 @@ const createNewPlanPrice = async(dataObj,plan)=>{
                 tiers_mode:tiers_mode,
                 tiers: getTiersArray,
                 expand: ['tiers'],  
-            });
+        });
         return{status:true, price:new_price}
     }catch(err){
         console.log("Error in createNewPrice",err)

@@ -765,6 +765,7 @@ exports.updateUserDetailsHook = async function(req,res){
         let userDetails = await User.where({'customer_id': object.customer}).fetch({ withRelated: ['plan_detail',{'user_plan': (qb) => {
             qb.where('is_active', true).limit(1);
           }}] });
+          console.log("userDetails",userDetails)
         userDetails = userDetails.toJSON();
         const subscription = await stripe.subscriptions.retrieve(
             object.subscription
@@ -918,35 +919,22 @@ exports.registerWithPaidPlan = async function(req,res){
             
             const isDiscount = await checkDiscount(response.user) 
             const customer = await createAndUpdateCustomerStripe(response.user,isDiscount,stripeToken,card_src,amount_paid)
-            if(customer.status){
-                let subscription;
-                if(per_minute_price_id === null){
-                    subscription = await stripe.subscriptions.create({
-                        customer: customer.customerId,
-                        items: [
-                            { 
-                                price: per_app_price_id, 
-                                quantity: 5
-                            },
-                        ],
-                
-                    })
-                }else{
-                    subscription = await stripe.subscriptions.create({
-                        customer: customer.customerId,
-                        items: [
-                            { 
-                                price: per_app_price_id, 
-                                quantity: 5
-                            },
-                            {
-                                price:per_minute_price_id,
-                                quantity:0
-                            }
-                        ],
-                
-                    })
-                }
+            if(customer.status){   
+                const subscription = await stripe.subscriptions.create({
+                    customer: customer.customerId,
+                    items: [
+                        { 
+                            price: per_app_price_id, 
+                            quantity: 5
+                        },
+                        {
+                            price:per_minute_price_id,
+                            quantity:0
+                        }
+                    ],
+            
+                })
+
                 if(subscription && subscription?.id){
                     await User.where({ 'ID': response.user.ID }).save({
                         'type': plan_detail?.code,
@@ -968,14 +956,20 @@ exports.registerWithPaidPlan = async function(req,res){
                         user_plan_obj['coupon_id'] = isDiscount.coupon.coupon_code
                     }
                     await new UserPlans(user_plan_obj).save(null, { method: 'insert' });
+                    await newRegistrationEmail(response.user?.email,plan_detail?.plan_name)
+                    res.status(200).send({
+                        message: userDetails?.userId ? "Subscribed Successfully" : "Registered and Subscribed Successfully.",
+                        status: 1
+                    });
+                }else{
+                    if(!customer?.isCustomerUpdated){
+                        await User.where({ 'ID': response.ID }).destroy();
+                    }
                 }
-                await newRegistrationEmail(response.user?.email,plan_detail?.plan_name)
-                res.status(200).send({
-                    message: userDetails?.userId ? "Subscribed Successfully" : "Registered and Subscribed Successfully.",
-                    status: 1
-                });
             }else{
-                await User.where({ 'ID': response.ID }).destroy();
+                if(!customer?.isCustomerUpdated){
+                    await User.where({ 'ID': response.ID }).destroy();
+                }
                 res.status(200).send({
                     message: "Something went wrong.",
                     status: 0
