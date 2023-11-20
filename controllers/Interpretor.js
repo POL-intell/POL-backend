@@ -85,6 +85,7 @@ exports.execuatePoll = async function (req, res) {
         for (var b = 0; b < fbuffer.length; b++) {
           //console.log(fbuffer[b].value)
           if (fbuffer[b].value) {
+            output_col = fbuffer[b].output_column;
             continue;
           }
           var vTable = fbuffer[b].vTable;
@@ -92,6 +93,7 @@ exports.execuatePoll = async function (req, res) {
 
           var row_position = i + parseInt(fbuffer[b].rr);
           output_col = fbuffer[b].output_column;
+          console.log(output_col,'output_col,', fbuffer[b])
           var virtual_table = fbuffer[b].virtual_table;
 
           //console.log(REC,'REC')
@@ -151,8 +153,10 @@ exports.execuatePoll = async function (req, res) {
          //console.log('enddddddd',pskeleton)
         }
 
+        console.log(pskeleton,'at end pskeleton')
 
         var result = await DBHelper.addbits(pskeleton);
+        console.log(result,output_col,'at end output_col')
         output_col = parseInt(output_col)
 
 
