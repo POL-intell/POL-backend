@@ -1,17 +1,14 @@
-var mysql = require('mysql2');
-const stream = require('stream');
-const { createPool } = require('mysql2');
 const BatchStream = require('batch-stream');
 const path = require('path')
 const sqlite3 = require('sqlite3').verbose();
 const currentDirectory = __dirname;
 const filePath = path.join(currentDirectory, '../controllers/sqlite-sakila.db');
 let dbConnection = null;
-//create connection to database by host,user,password and database. For this mysql2 package is used tomake connection to mysql 
+
+/*create connection to database by host,user,password and database. For this mysql2 package is used tomake connection to mysql*/
 exports.createConnection = async function (config) {
     config.dbPath = filePath
     return new Promise((resolve, reject) => {
-        console.log("dbConnection:>>>",dbConnection)
         if(!dbConnection){
             dbConnection =  new sqlite3.Database(config.dbPath,sqlite3.OPEN_READWRITE, (err) => {
                 if (err) {
@@ -34,8 +31,6 @@ exports.createConnection = async function (config) {
                 status: 1
             });
         }
-        console.log("connection",dbConnection)
-		
     }).catch(error => {
         console.log('eee22', 'error', error)
 
@@ -43,6 +38,8 @@ exports.createConnection = async function (config) {
 
 
 }
+
+/* To make connection with database*/
 async function makeConnection(config) {
     console.log("In makeconnection")
     config.dbPath = filePath
@@ -63,6 +60,7 @@ async function makeConnection(config) {
     });
 }
 
+/* To get the tables list in database*/
 exports.getTablesListOfDatabase = async function (config) {
     config.dbPath = filePath
     return new Promise(async(resolve, reject) => {
@@ -70,9 +68,7 @@ exports.getTablesListOfDatabase = async function (config) {
                 if (!dbConnection) {
                     dbConnection = await makeConnection(config);
                 }
-
                 if(dbConnection){
-                    console.log("dbConnection",dbConnection)
                     var q = "SELECT name FROM sqlite_master WHERE type='table'";
                     dbConnection.serialize(function () {
                     dbConnection.all(q, (err, rows) => {
@@ -83,12 +79,10 @@ exports.getTablesListOfDatabase = async function (config) {
                               status: 0
                               });
                         }
-                        console.log("rows",rows)
                         const renamedData = rows.map(obj => {
                             // Create a new object with ']tableName' key and the value of 'name'
                             return { 'TABLE_NAME': obj['name'] };
                           });
-    
                         resolve({
                             result: renamedData,
                             status: 1
@@ -96,13 +90,10 @@ exports.getTablesListOfDatabase = async function (config) {
                     });
                 })
                 }
-
-
     });
 }
 
-
-
+/* To get the data from a table*/
 exports.getTableData = async function (config, table) {
     config.dbPath = filePath
     return new Promise(async (resolve, reject) => {
@@ -127,31 +118,7 @@ exports.getTableData = async function (config, table) {
     });
 }
 
-async function getRowCount(connection, table) {
-    return new Promise((resolve, reject) => {
-        connection.get("SELECT COUNT(*) as count FROM " + table, (err, row) => {
-            if (err) {
-                reject(err);
-            } else {
-                resolve(row.count);
-            }
-        });
-    });
-}
-
-async function fetchDataBatch(connection, table, batchSize, offset) {
-    return new Promise((resolve, reject) => {
-        const query = `SELECT * FROM ${table} LIMIT ${batchSize} OFFSET ${offset}`;
-        connection.all(query, (err, rows) => {
-            if (err) {
-                reject(err);
-            } else {
-                resolve(rows);
-            }
-        });
-    });
-}
-
+/*To execute data links (queries) and return response*/
 exports.getSqlData = async function (config, sql) {
     config.dbPath = filePath
     return new Promise(async (resolve, reject) => {
@@ -188,6 +155,7 @@ exports.getSqlData = async function (config, sql) {
 
 };
 
+/* To add a unique col name pol in table, If unique key not exist */
 exports.addPolColumn = async function (config, table) {
     config.dbPath = filePath
     return new Promise(async (resolve, reject) => {
@@ -207,13 +175,13 @@ exports.addPolColumn = async function (config, table) {
     });
 }
 
+/* To find unique key in database*/
 exports.getUniqueCol = async function (config, table) {
     config.dbPath = filePath
     return new Promise(async (resolve, reject) => {
         if (!dbConnection) {
             dbConnection = await makeConnection(config);
         }
-        // let q = "SELECT K.COLUMN_NAME, T.CONSTRAINT_TYPE FROM ( SELECT tbl_name AS TABLE_NAME, name AS CONSTRAINT_NAME, 'PRIMARY KEY' AS CONSTRAINT_TYPE FROM sqlite_master WHERE type = 'table'   AND sql LIKE '%PRIMARY KEY%' UNION SELECT tbl_name AS TABLE_NAME, name AS CONSTRAINT_NAME, 'FOREIGN KEY' AS CONSTRAINT_TYPE FROM sqlite_master WHERE type = 'table'   AND sql LIKE '%FOREIGN KEY%') AS T JOIN ( SELECT tbl_name AS TABLE_NAME, name AS CONSTRAINT_NAME, sql AS COLUMN_NAME FROM sqlite_master WHERE type = 'index' AND sql LIKE 'CREATE UNIQUE INDEX%') AS K ON K.TABLE_NAME = T.TABLE_NAME AND K.CONSTRAINT_NAME = T.CONSTRAINT_NAME WHERE T.TABLE_NAME = '" + table + "' ;"
         let q1 = `PRAGMA table_info(${table})`;
         dbConnection.all(q1, async function (error, rows) {
             if(error){
@@ -250,7 +218,6 @@ exports.getUniqueCol = async function (config, table) {
                 });
             }else{
                 const primaryKeyColumns = rows.filter(column => column.pk === 1).map(column => column.name);
-                console.log("primary",primaryKeyColumns)
                 if(primaryKeyColumns.length > 0){
                     resolve({ cols: primaryKeyColumns, status:1 })
                 }else{
@@ -261,9 +228,7 @@ exports.getUniqueCol = async function (config, table) {
     });
 }
 
-
-
-
+/* To create a result table in database */
 exports.createResultTable = function (dbDetails, tableName, totalRows, columnName) {
     return new Promise(async (resolve, reject) => {
        
@@ -322,6 +287,8 @@ exports.createResultTable = function (dbDetails, tableName, totalRows, columnNam
     });
 };
 
+
+/* To check for duplicate table names */
 exports.checkTableExistence= async function(dbDetails, tableName) {
 
     return new Promise(async (resolve, reject) => {
@@ -346,7 +313,7 @@ exports.checkTableExistence= async function(dbDetails, tableName) {
     });
 }
 
-
+/* To check for duplicate column names in table */
 exports.checkColumnExistence = async function(dbDetails, tableName, columnName) {
     return new Promise(async(resolve, reject) => {
         if (!dbConnection) {
@@ -370,8 +337,7 @@ exports.checkColumnExistence = async function(dbDetails, tableName, columnName) 
     });
 };
 
-
-
+/* To crteate new column name in table */
 exports.createColumn = async function (dbDetails, tableName, columnName) {
 
     return new Promise(async (resolve, reject) => {
@@ -396,3 +362,31 @@ exports.createColumn = async function (dbDetails, tableName, columnName) {
 
     });
 };
+
+
+/* To fetch data using batches*/
+async function fetchDataBatch(connection, table, batchSize, offset) {
+    return new Promise((resolve, reject) => {
+        const query = `SELECT * FROM ${table} LIMIT ${batchSize} OFFSET ${offset}`;
+        connection.all(query, (err, rows) => {
+            if (err) {
+                reject(err);
+            } else {
+                resolve(rows);
+            }
+        });
+    });
+}
+
+/* To get the total row count in the table*/
+async function getRowCount(connection, table) {
+    return new Promise((resolve, reject) => {
+        connection.get("SELECT COUNT(*) as count FROM " + table, (err, row) => {
+            if (err) {
+                reject(err);
+            } else {
+                resolve(row.count);
+            }
+        });
+    });
+}

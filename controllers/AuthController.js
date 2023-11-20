@@ -110,173 +110,6 @@ exports.login = async function (req, res) {
 }
 
 
-/**Susbcribe to one plan to user*/
-exports.subscribe = async function (req, res) {
-    try{
-        let customerId = ''
-        const data = req.body
-        let user = await User.where({ 'ID': req.user.ID }).fetch();
-        user = user.toJSON();
-        
-        let plan_detail = await Plan.where({ 'plan_name': data.plan_name }).fetch();
-        plan_detail = plan_detail.toJSON();
-        if (data.subscription_type == 'trail') {
-            //update user table
-            let data = await User.where({ 'ID': req.user.ID }).save({
-                'type': plan_detail.code,
-                'span': 'T',
-                'trial_start_date': new Date(),	
-                'is_trial_start':1
-            }, { patch: true });
-            res.status(200).send({
-                message: "Subscribed Successfully ",
-                status: 1
-            });
-            return
-        }
-
-        if(user.customer_id === null){
-            const customer = await stripe.customers.create({
-                source: req.body.token.id,
-                description: 'By username : ' + user.username,
-                name: data.first_name,
-                email: data.email
-            }); 
-            if(customer){
-                customerId = customer.id
-                await User.where({ 'ID': req.user.ID }).save({
-                    'customer_id': customer.id,
-                }, { patch: true });
-            }
-        }else{
-            customerId = user.customer_id
-        }
-        //create customer
-        if(customerId){
-            const monthly_price_id = plan_detail.monthly_price_id
-            const monthly_per_minute_price_id = plan_detail.monthly_per_minute_price_id
-            const subscription = await stripe.subscriptions.create({
-                customer: customerId,
-                items: [
-                    { 
-                        price: monthly_price_id, 
-                        quantity: 5
-                    },
-                    {
-                        price:monthly_per_minute_price_id,
-                        quantity:0
-                    }
-                ],
-        
-            }, async (err, charge) => {
-        
-        
-                if (err) {
-                    res.status(200).send({
-                        message: err,
-                        status: 0
-                    });
-                } else {
-                    //update user table
-                    await User.where({ 'ID': req.user.ID }).save({
-                        'type': plan_detail.code,
-                        'subscription_status': 1
-                    }, { patch: true });
-        
-                    //save payment infor into  table
-                    let price = 0;
-                    if (data.term == 'monthly') {
-                        price = plan_detail.monthly_per_app
-                    } else {
-                        price = plan_detail.yearly_per_app
-                    }
-                    await new Payment({
-                        'user_id': req.user.ID,
-                        'transaction_id': charge.id,
-                        'amount': price,
-                        'currency': charge.currency,
-                        'paid_status': 0,
-                        'status': 0,
-                        'receipt_url': charge.items.url,
-                        'plan_id': data.plan_id,
-                        'plan_term': data.plan_term
-        
-                    }).save(null, { method: 'insert' });
-        
-                    res.status(200).send({
-                        message: "Payment Successfull",
-                        status: 1
-                    });
-                }
-            })
-        }
-            
-    }catch(err){
-        console.log("this is error ", err)
-    }
-   
-}
-
-/**registe ruser in pol */
-exports.register = async function (req, res) {
-
-    var data = req.body
-
-    var existusername = await User.where({ 'username': data.username }).count();
-    if (existusername > 0) {
-        res.status(200).send({
-            message: "Username is already registed.",
-            status: 0
-        });
-        return
-    }
-
-
-    var existEmail = await User.where({ email: data.email }).count();
-    if (existEmail > 0) {
-        res.status(200).send({
-            message: 'Email  is already registered',
-            status: 0
-        });
-    }
-
-    if (data.username != data.confirm_username) {
-        res.status(200).send({
-            message: "username and confirm username don't matched.",
-            status: 0
-        });
-        return
-    }
-
-
-    if (data.password != data.confirm_password) {
-        res.status(200).send({
-            message: "Password and confirm password don't matched.",
-            status: 0
-        });
-        return
-    }
-
-    bcrypt.hash(data.password, saltRounds, async function (err, hash) {
-        let phoneNumber = data.code + '-' + data.phone
-        const user = await new User({
-            'username': data.username,
-            'password': hash,
-            'first_name': data.name,
-            'email': data.email,
-            'mobile': phoneNumber,
-            'surname': data.family_name,
-            'plain_password':data.password
-        }).save();
-
-        res.status(200).send({
-            message: "Register Successfull",
-            status: 1
-        });
-
-    });
-}
-
 /**get the user detail of logge din user*/
 exports.userDetail = async function (req, res) {
     var data = req.body
@@ -303,6 +136,7 @@ exports.fetchUser = async function (req, res){
 }
 
 /**save the new file  according to user id in database*/
+
 exports.saveFile = async function (req, res) {
 
     var data = req.body
@@ -765,27 +599,14 @@ exports.updateUserDetailsHook = async function(req,res){
         let userDetails = await User.where({'customer_id': object.customer}).fetch({ withRelated: ['plan_detail',{'user_plan': (qb) => {
             qb.where('is_active', true).limit(1);
           }}] });
-          console.log("userDetails",userDetails)
         userDetails = userDetails.toJSON();
         const subscription = await stripe.subscriptions.retrieve(
             object.subscription
         );
 
         const per_app_item = subscription.items.data.find(item => item.price.id === userDetails?.user_plan[0]?.per_app_price_id);
+      
         let per_minute_quantity = 0
-        let getDateDifference = await getDateDiff(userDetails)
-        console.log("getDateDifference",getDateDifference)
-        if(userDetails?.user_plan[0]?.per_minute_price_id  !== null && !getDateDifference){
-            const per_minute_item = subscription.items.data.find(item => item.price.id === userDetails.user_plan[0]?.per_minute_price_id);
-            per_minute_quantity = per_minute_item?.quantity
-            let data = await stripe.subscriptionItems.update(
-                per_minute_item.id,
-                {
-                    quantity : 0,
-                    proration_behavior: 'none'
-                }
-            );
-        }
         
         try{
             await User.where({ 'ID': userDetails?.ID }).save({
@@ -801,7 +622,7 @@ exports.updateUserDetailsHook = async function(req,res){
                 'paid_status': object.paid,
                 'status': object.status,
                 'receipt_url': object.invoice_pdf,
-                'per_app_quantity': per_app_item.quantity,
+                'per_app_quantity': per_app_item?.quantity,
                 'per_minute_quantity': per_minute_quantity
 
             }).save(null, { method: 'insert' });
@@ -815,12 +636,26 @@ exports.updateUserDetailsHook = async function(req,res){
                 'paid_status': object.paid,
                 'status': object.status,
                 'receipt_url': object.invoice_pdf,
-                'per_app_quantity': per_app_item.quantity,
+                'per_app_quantity': per_app_item?.quantity,
                 'per_minute_quantity':per_minute_quantity
 
             }).save(null, { method: 'insert' });
         }
-
+       
+        let getDateDifference = await getDateDiff(userDetails)
+        if(userDetails?.user_plan[0]?.per_minute_price_id  !== null && !getDateDifference){
+            const per_minute_item = subscription.items.data.find(item => item.price.id === userDetails.user_plan[0]?.per_minute_price_id);
+            if(per_minute_item){
+                per_minute_quantity = per_minute_item?.quantity
+                await stripe.subscriptqionItems.update(
+                    per_minute_item.id,
+                    {
+                        quantity : 0,
+                        proration_behavior: 'none'
+                    }
+                );
+            }
+        }
         if((userDetails?.user_plan[0]?.cancel_plan === 1 || userDetails?.user_plan[0]?.renewal_plan === 0) && userDetails?.user_plan[0]?.subscription_id === subscription.id && !getDateDifference){
             await stripe.subscriptions.cancel(userDetails?.user_plan[0]?.subscription_id);
             await UserPlans.where({'user_id' : userDetails?.user_plan[0]?.user_id}).save({
@@ -830,7 +665,6 @@ exports.updateUserDetailsHook = async function(req,res){
                 'subscription_status' : 0
             },{patch: true })
             io.emit("subscription-ended",{'userId': userDetails?.ID})
-
         }
         res.status(200).send({
             message: "Updated Successfully.",
@@ -910,7 +744,7 @@ exports.registerWithPaidPlan = async function(req,res){
                 }}] });
             }
             plan_detail = plan_detail.toJSON()
-            let per_minute_price_id = plan_detail?.plans_pricing[0]?.per_minute_price_id
+            let per_minute_price_id = userDetails.plan_term === 'monthly' ? plan_detail?.plans_pricing[0]?.monthly_per_minute_price_id : plan_detail?.plans_pricing[0]?.yearly_per_minute_price_id
 
             let per_app_price_id = userDetails.plan_term === 'monthly' ? plan_detail?.plans_pricing[0]?.monthly_price_id : plan_detail?.plans_pricing[0]?.yearly_price_id
 
@@ -930,7 +764,7 @@ exports.registerWithPaidPlan = async function(req,res){
                         {
                             price:per_minute_price_id,
                             quantity:0
-                        }
+                        },
                     ],
             
                 })

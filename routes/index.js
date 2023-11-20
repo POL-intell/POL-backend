@@ -35,7 +35,7 @@ router.all('/checkUNiqueColumns', Interpretor.checkUNiqueColumns);
 router.all('/commitPoll', Interpretor.commitPoll);
 //Rollback the pol function
 router.all('/rollbackPoll', DBController.rollbackPoll);
-//Add pol column to table 
+//Add pol column to                                                                                                                                                                                                     
 router.all('/addPolColumn/:table', DBController.addPolColumn);
 router.all('/addPolColumns', DBController.addPolColumns);
 router.all('/addColumn', DBController.addColumn);
@@ -43,22 +43,23 @@ router.all('/checkUniqueCol', DBController.checkUniqueCol)
 router.all('/createResultTable', DBController.createResultTable)
 router.all('/createResultColumn', DBController.createResultColumn)
 
-
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            
 //auth and payment
-router.post('/register' , AuthController.register);
-router.post('/subscribe', auth_middleware.auth,AuthController.subscribe);
+// router.post('/register' , AuthController.register);
+// router.post('/subscribe', auth_middleware.auth,AuthController.subscribe);    
 router.get('/plans/' , AuthController.plans);
 router.get('/plansForPricing/:activeTab' , AuthController.plansForPricing);
 
 router.post('/login' , AuthController.login);
 
-router.post('/subscribe', auth_middleware.auth,AuthController.subscribe);
+// router.post('/subscribe', auth_middleware.auth,AuthController.subscribe);
 
 
 router.post('/user_detail', auth_middleware.auth,AuthController.userDetail);
+// router.post('/user_detail',AuthController.userDetail);
 
 router.post('/save_file', auth_middleware.auth,AuthController.saveFile);
-router.post('/delete_files', auth_middleware.auth,AuthController.deleteFiles);
+router.post('/delete_files', auth_middleware.auth,AuthController.deleteFiles);                                                                                                                                                     
 
 router.post('/update_file', auth_middleware.auth,AuthController.updateFile);
 router.post('/get_user_files', auth_middleware.auth,AuthController.getuserFiles);

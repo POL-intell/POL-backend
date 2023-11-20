@@ -1,10 +1,9 @@
 var mysql = require('mysql2');
 const stream = require('stream');
-const { createPool } = require('mysql2');
 const BatchStream = require('batch-stream');
 
 
-//create connection to database by host,user,password and database. For this mysql2 package is used tomake connection to mysql 
+/*create connection to database by host,user,password and database. For this mysql2 package is used tomake connection to mysql*/
 exports.createConnection = async function (config) {
     var payload = {
         host: config.host,
@@ -39,6 +38,8 @@ exports.createConnection = async function (config) {
 
 
 }
+
+/*To make connection with database*/
 async function makeConnection(config) {
     var payload = {
         host: config.host,
@@ -67,6 +68,7 @@ async function makeConnection(config) {
     });
 }
 
+/* To get the tables list in database*/
 exports.getTablesListOfDatabase = async function (config) {
     return new Promise((resolve, reject) => {
         makeConnection(config).then((db) => {
@@ -105,7 +107,7 @@ exports.getTablesListOfDatabase = async function (config) {
     });
 }
 
-//get and return if there is some unique,primary etc column exist or not
+/* To find unique key in database*/
 exports.getUniqueCol = async function (config, table) {
 
     return new Promise(async (resolve, reject) => {
@@ -130,6 +132,7 @@ exports.getUniqueCol = async function (config, table) {
     });
 }
 
+/* To get the data from a table*/
 exports.getTableData = async function (config, table) {
     console.log("in mysql")
     return new Promise(async (resolve, reject) => {
@@ -163,34 +166,13 @@ exports.getTableData = async function (config, table) {
     });
 }
 
+/*To execute data links (queries) and return response*/
 exports.getSqlData = async function (config, sql) {
 
     return new Promise(async (resolve, reject) => {
         makeConnection(config).then((db) => {
             var data = [];
             if (db && db.status == 1) {
-                // db.connection.query(sql)
-                //     .on('error', function (err) {
-                //         console.log(err,'errrr')
-                //        // reject(0)
-                       
-                //     })
-                //     .stream()
-                //     .pipe(new stream.Transform({
-                //         objectMode: true,
-                //         transform: function (row, encoding, callback) {
-                           
-                //             data.push(row);
-                //             callback();
-
-                //         }
-                //     }))
-                //     .on('finish', function () {
-                //         db.connection.end();
-                //         resolve(data)
-                       
-                //     });
-
                 const query = db.connection.query(sql).on('error', function (err) {
                     console.log(err)
                     reject(err)
@@ -225,7 +207,7 @@ exports.getSqlData = async function (config, sql) {
 
 };
 
-//get and return if there is some unique,primary etc column exist or not
+/* To add a unique col name pol in table, If unique key not exist */
 exports.addPolColumn = async function (config, table) {
 
     return new Promise(async (resolve, reject) => {
@@ -248,7 +230,7 @@ exports.addPolColumn = async function (config, table) {
     });
 }
 
-
+/* To check user permission to update database or tables  */
 exports.checkPrivilige = async function(config,table){
     return new Promise((resolve,reject)=>{
         console.log("config",config)
@@ -300,6 +282,7 @@ exports.checkPrivilige = async function(config,table){
     })
 }
 
+/* To create a result table in database */
 exports.createResultTable = function (dbDetails, tableName, totalRows, columnName) {
     console.log("columnName",columnName)
     return new Promise((resolve, reject) => {
@@ -365,6 +348,7 @@ exports.createResultTable = function (dbDetails, tableName, totalRows, columnNam
     });
 };
 
+/* To check for duplicate table names */
 exports.checkTableExistence = async function (dbDetails, tableName) {
     return new Promise((resolve, reject) => {
         makeConnection(dbDetails)
@@ -397,6 +381,7 @@ exports.checkTableExistence = async function (dbDetails, tableName) {
     });
 }
 
+/* To check for duplicate column names in table */
 exports.checkColumnExistence = async function(dbDetails,tableName,columnName){
     return new Promise((resolve, reject) => {
         makeConnection(dbDetails)
@@ -429,6 +414,7 @@ exports.checkColumnExistence = async function(dbDetails,tableName,columnName){
     });
 }
 
+/* To crteate new column name in table */
 exports.createColumn = async function (dbDetails, tableName, columnName) {
     return makeConnection(dbDetails)
         .then((db) => {

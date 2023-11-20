@@ -136,7 +136,6 @@ const createAndUpdateCustomerStripe = async(user,discountObj,stripeToken,card_sr
                return {status : true, customerId : user.customer_id}
            }
        }catch(err){
-           console.log("Error in createAndUpdateCustomerStripe",err)
            return {status : false, isCustomerUpdated: user.customer_id === null ? false : true}
        }
       
@@ -148,15 +147,16 @@ const updatePerAppQuantity = async (data)=>{
         let subscription = await stripe.subscriptions.retrieve(
             data.subscripton_id
         );
-        const per_app_item = subscription.items.data.find(item => item.price.id === data.per_app_price_id);
-        await stripe.subscriptionItems.update(
-            per_app_item.id,
-            {
-                quantity : data.per_app_quantity,
-                proration_behavior: 'none'
-            }
-        );  
-        
+        const per_app_item = subscription.items.data.find(item => item['price']['id'] === data['per_app_price_id']);
+        if(per_app_item){
+            await stripe.subscriptionItems.update(
+                per_app_item.id,
+                {
+                    quantity : data.per_app_quantity,
+                    proration_behavior: 'none'
+                }
+            );  
+        }
     }catch(err){
         console.log("Error in updatePerAppQuantity",err)
         return false
@@ -208,18 +208,19 @@ const updatePerMinuteQuantity = async function(data){
         let subscription = await stripe.subscriptions.retrieve(
             data.subscripton_id
         );
-        const per_minute_item = subscription.items.data.find(item => item.price.id === data.per_minute_price_id);
-
-        await stripe.subscriptionItems.update(
-            per_minute_item.id,
-            {
-            quantity : data.per_minute_quantity,
-            proration_behavior: 'none'
-            }
-        );  
-        await User.where({ 'ID': data.userId }).save({
-            'used': 0,
-        }, { patch: true });
+        const per_minute_item = subscription.items.data.find(item => item['price']['id'] === data['per_minute_price_id']);
+        if(per_minute_item){
+            await stripe.subscriptionItems.update(
+                per_minute_item.id,
+                {
+                quantity : data.per_minute_quantity,
+                proration_behavior: 'none'
+                }
+            );  
+            await User.where({ 'ID': data.userId }).save({
+                'used': 0,
+            }, { patch: true });
+        }
         // return {status: true}
     }catch(err){
         console.log("Error in updatePerMinuteQuantity",err)
@@ -251,7 +252,7 @@ const getDateDiff = async(userDetails)=>{
     const startingDate =  new Date(userDetails?.starting_date)
     const formattedCurrentDate = `${currentDate.getFullYear()}-${(currentDate.getMonth() + 1).toString().padStart(2, '0')}-${currentDate.getDate().toString().padStart(2, '0')}`;
     console.log("formattedCurrentDate",formattedCurrentDate , new Date(formattedCurrentDate).getTime()) 
-    const formattedStartingDate = `${currentDate.getFullYear()}-${(currentDate.getMonth() + 1).toString().padStart(2, '0')}-${currentDate.getDate().toString().padStart(2, '0')}`;
+    const formattedStartingDate = `${startingDate.getFullYear()}-${(startingDate.getMonth() + 1).toString().padStart(2, '0')}-${startingDate.getDate().toString().padStart(2, '0')}`;
     console.log("formattedStartingDate",formattedStartingDate,new Date(formattedStartingDate).getTime()) 
     return (formattedCurrentDate == formattedStartingDate)
 }
