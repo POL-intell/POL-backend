@@ -910,7 +910,7 @@ exports.registerWithPaidPlan = async function(req,res){
                 }}] });
             }
             plan_detail = plan_detail.toJSON()
-            let per_minute_price_id = plan_detail?.plans_pricing[0]?.per_minute_price_id
+            let per_minute_price_id = userDetails.plan_term === 'monthly' ? plan_detail?.plans_pricing[0]?.monthly_per_minute_price_id : plan_detail?.plans_pricing[0]?.yearly_per_minute_price_id
 
             let per_app_price_id = userDetails.plan_term === 'monthly' ? plan_detail?.plans_pricing[0]?.monthly_price_id : plan_detail?.plans_pricing[0]?.yearly_price_id
 
