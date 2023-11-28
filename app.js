@@ -5,7 +5,7 @@ var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 const cors = require('cors')
 require('dotenv').config()
-const indexRouter = require('./routes/index');
+const indexRouter = require('./routes/index.js');
 const {updatePerMinuteQuantityScheduler,trackTrialPlanScheduler} = require('./cronjobs/schedule.js') ;
 
 

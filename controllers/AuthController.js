@@ -18,9 +18,11 @@ const {registerUser,checkDiscount,createAndUpdateCustomerStripe,updatePerAppQuan
 const {sendForgotPasswordEmail,newRegistrationEmail} = require("../services/EmalServices");
 const NewPlans = require('../models/NewPlans');
 
-// const saltRounds = 10;
-
-/**get all the plans list and their details*/
+/**
+ * Retrieves a list of plans along with their details.
+ * @params {Object} req - The request object.
+ * @params {Object} res - The response object.
+*/
 exports.plans = async function (req, res) {
     const count = await User.where({}).count()
     let plans;
@@ -41,6 +43,11 @@ exports.plans = async function (req, res) {
 }
 
 
+/**
+ * Retrieves a list of plans along with their details for admin.
+ * @params {Object} req - The request object => ({activeTab}).
+ * @params {Object} res - The response object.
+*/
 exports.plansForPricing = async function (req, res) {
     let {activeTab} = req.params
     let plans;
@@ -61,7 +68,11 @@ exports.plansForPricing = async function (req, res) {
     });
 }
 
-/**login to pol bu username and password*/
+/**
+ * login to pol by username and password.
+ * @params {Object} req - The request object =>({username, password}).
+ * @params {Object} res - The response object.
+*/
 exports.login = async function (req, res) {
     try{
         var data = req.body
@@ -110,7 +121,11 @@ exports.login = async function (req, res) {
 }
 
 
-/**get the user detail of logge din user*/
+/**
+ * Retrieve the user detail of logged in user.
+ * @params {Object} req - The request object => ({user.ID}).
+ * @params {Object} res - The response object.
+*/
 exports.userDetail = async function (req, res) {
     var data = req.body
     var user = await User.where({ 'ID': req.user.ID }).fetch({ withRelated: ['default_connection','payment_detail', 'plan_detail','discount',{'user_plan': (qb) => {
@@ -135,8 +150,11 @@ exports.fetchUser = async function (req, res){
     });
 }
 
-/**save the new file  according to user id in database*/
-
+/**
+ * Save the new file  according to user id in database.
+ * @params {Object} req - The request object => ({user.ID}).
+ * @params {Object} res - The response object.
+*/
 exports.saveFile = async function (req, res) {
 
     var data = req.body
@@ -192,7 +210,11 @@ exports.saveFile = async function (req, res) {
     }
 }
 
-// deleteFile accord to userid
+/**
+ * Delete the saved file  according to user id in database.
+ * @params {Object} req - The request object => ({id}).
+ * @params {Object} res - The response object.
+*/
 exports.deleteFiles = async function(req,res){
     let data = req.body
     console.log("data",data)
@@ -227,9 +249,12 @@ exports.deleteFiles = async function(req,res){
     
 }
 
-/**Update already exusting file*/
+/**
+ * Update  the existing file  according to user id in database.
+ * @params {Object} req - The request object => ({id}).
+ * @params {Object} res - The response object.
+*/
 exports.updateFile = async function (req, res) {
-
 
     var data = req.body
 
@@ -245,7 +270,11 @@ exports.updateFile = async function (req, res) {
     return
 }
 
-/**to get  all the fiels created by user*/
+/**
+ * To retrieve  all the fiels created by user.
+ * @params {Object} req - The request object => ({user.ID}).
+ * @params {Object} res - The response object.
+*/
 exports.getuserFiles = async function (req, res) {
 
 
@@ -261,7 +290,11 @@ exports.getuserFiles = async function (req, res) {
 }
 
 
-/**To save folder according to parnet folder of a user*/
+/**
+ * To save folder according to parnet folder of a user.
+ * @params {Object} req - The request object => ({folder_name,parent_folder_id,user.ID}).
+ * @params {Object} res - The response object.
+*/
 exports.saveFolder = async function (req, res) {
     var data = req.body
 
@@ -279,7 +312,11 @@ exports.saveFolder = async function (req, res) {
     return
 }
 
-/**to get the list of main root folders (folders that have not parent folder)*/
+/**
+ * To get the list of main root folders (folders that have not parent folder).
+ * @params {Object} req - The request object => ({user.ID}).
+ * @params {Object} res - The response object.
+*/
 exports.mainFolders = async function (req, res) {
 
 
@@ -294,7 +331,11 @@ exports.mainFolders = async function (req, res) {
     return
 }
 
-/**get the folders routes (path of folder)*/
+/**
+ * To get the folders routes (path of folder).
+ * @params (number) => folder_id
+ * @response [array] => The array contains the folder paths.
+*/
 async function getFolderRoute(folder_id) {
 
     var is_folder = await Folder.where({ 'id': folder_id }).count();
@@ -327,10 +368,12 @@ async function getFolderRoute(folder_id) {
 }
 
 
-/**Get the dub folders list by parent folder id*/
+/**
+ * To get the sub folders list by parent folder id.
+ * @params {Object} req - The request object => ({user.ID}).
+ * @params {Object} res - The response object.
+*/
 exports.subFolders = async function (req, res) {
-
-
     var folders = await Folder.where({ 'user_id': req.user.ID, 'parent_folder_id': req.params.id }).fetchAll();
     folders = folders.toJSON()
     var list = folders;
@@ -366,7 +409,11 @@ exports.subFolders = async function (req, res) {
 }
 
 
-/**get the back folders list from folder id*/
+/**
+ * To get the back folders list from folder id.
+ * @params {Object} req - The request object => ({id, user.ID}).
+ * @params {Object} res - The response object.
+*/
 exports.backSubFolders = async function (req, res) {
     var folder = await Folder.where({ 'id': req.params.id }).fetch();
     folder = folder.toJSON()
@@ -407,7 +454,11 @@ exports.backSubFolders = async function (req, res) {
 }
 
 
-/**Get the temporary file of a logge din user*/
+/**
+ * To get the temporary file of a logge din user.
+ * @params {Object} req - The request object => ({user.ID}).
+ * @params {Object} res - The response object.
+*/
 exports.getTemp = async function (req, res) {
 
     var exist = await Temp.where({ 'user_id': req.user.ID }).count();
@@ -426,7 +477,11 @@ exports.getTemp = async function (req, res) {
 }
 
 
-/**Save temporary file to logged in user to database*/
+/**
+ * Save temporary file to logged in user to database.
+ * @params {Object} req - The request object => ({user.ID}).
+ * @params {Object} res - The response object.
+*/
 exports.saveTemp = async function (req, res) {
 
     var exist = await Temp.where({ 'user_id': req.user.ID }).count();
@@ -455,8 +510,11 @@ exports.saveTemp = async function (req, res) {
     return
 }
 
-
-/**Open last open files of logged in user*/
+/**
+ * Open last open files of logged in user.
+ * @params {Object} req - The request object => ({user.ID}).
+ * @params {Object} res - The response object.
+*/
 exports.lastOpenFiles = async function (req, res) {
 
     var files = await UserFile.where({ 'user_id': req.user.ID }).orderBy('updated_at', 'desc').fetchAll();
@@ -480,7 +538,11 @@ exports.lastOpenFiles = async function (req, res) {
 
 }
 
-/**Save default connection to logged in user*/
+/**
+ * Save default connection to logged in user.
+ * @params {Object} req - The request object => ({user.ID}).
+ * @params {Object} res - The response object.
+*/
 exports.savedefaultConnection = async function (req, res) {
     var exist = await DefaultConnection.where({ 'user_id': req.user.ID }).count();
 
@@ -518,6 +580,13 @@ exports.savedefaultConnection = async function (req, res) {
     });
     return
 }
+
+
+/**
+ * Update default connection to logged in user.
+ * @params {Object} req - The request object => ({user.ID}).
+ * @params {Object} res - The response object.
+*/
 exports.update_default_connection = async function (req, res) {
 
     var data = req.body
@@ -543,6 +612,11 @@ exports.update_default_connection = async function (req, res) {
     return
 }
 
+/**
+ * Update default connection to logged in user.
+ * @params {Object} req - The request object => ({user.ID}).
+ * @params {Object} res - The response object.
+*/
 exports.delete_default_connection = async function (req, res) {
 
     var data = req.body
@@ -563,7 +637,11 @@ exports.delete_default_connection = async function (req, res) {
     return
 }
 
-/**Get the user data bu user id*/
+/**
+ * Get the user data bu user id.
+ * @params {Object} req - The request object => ({id}).
+ * @return {Object} user - The user object with user details.
+*/
 async function getUserData(id) {
    
     try{
@@ -580,19 +658,11 @@ async function getUserData(id) {
     
 }
 
-exports.updateSubscriptionType=  async function(req,res){
-    let data = req.body
-    await User.where({ 'ID': req.user.ID }).save({
-        'trail_status': data.trail_status,
-        'trail_end_date': new Date(),
-    }, { patch: true });
-    res.status(200).send({
-        message: "Updated Successfully",
-        status: 1,
-    });
-}
-
-// function executes when stripe webhook called (webhook called when an invoice paid)
+/**
+ * This function executes when stripe webhook called (webhook called when an invoice paid).
+ * @params {Object} req - The request object contains subscription details.
+ * @params {Object} res - The response object.
+*/
 exports.updateUserDetailsHook = async function(req,res){
     try{
         const {object} = req.body.data
@@ -640,7 +710,7 @@ exports.updateUserDetailsHook = async function(req,res){
                 'per_minute_quantity':per_minute_quantity
 
             }).save(null, { method: 'insert' });
-        }
+        } 
        
         let getDateDifference = await getDateDiff(userDetails)
         if(userDetails?.user_plan[0]?.per_minute_price_id  !== null && !getDateDifference){
@@ -679,7 +749,11 @@ exports.updateUserDetailsHook = async function(req,res){
     }
 }
 
-// function executes when registered and subscribe for test  plan
+/**
+ * To  register and subscribe user for test  plan.
+ * @params {Object} req - The request object => ({id}).
+ * @params {Object} res - The response object.
+*/
 exports.registerWithTestPlan = async function(req,res){
     try{
         let userDetails = req.body
@@ -709,10 +783,16 @@ exports.registerWithTestPlan = async function(req,res){
     }
 }
 
-// function executes when registered and subscribe for paid  plan
+/**
+ * To  register and subscribe user for paid  plan.
+ * @params {Object} req - The request object => ({id}).
+ * @params {Object} res - The response object.
+*/
 exports.registerWithPaidPlan = async function(req,res){
     try{
         let userDetails = req.body
+        console.log("userDetails",userDetails)
+        // return
         const stripeToken = req.body?.token?.id
         const card_src = req.body.token.card.id
         const renewal_plan = userDetails?.renewal === true ? 1 : 0
@@ -819,7 +899,11 @@ exports.registerWithPaidPlan = async function(req,res){
     }
 }
 
-// function executes to send a recover password link to user
+/**
+ * To send a recover password link to user.
+ * @params {Object} req - The request object => ({id}).
+ * @params {Object} res - The response object.
+*/
 exports.sendForgotPassLink = async function(req,res){
     try{
         const data = req.body
@@ -857,7 +941,11 @@ exports.sendForgotPassLink = async function(req,res){
     }
 }
 
-// function executes to recover user password
+/**
+ * To update password.
+ * @params {Object} req - The request object => ({id}).
+ * @params {Object} res - The response object.
+*/
 exports.forgotPassword = async function(req,res){
     try{
         const {new_password , confirm_new_password, userId} = req.body
@@ -895,7 +983,11 @@ exports.forgotPassword = async function(req,res){
     }
 }
 
-// function executes to update users accoutn details 
+/**
+ * To update users accoutn details.
+ * @params {Object} req - The request object => ({id}).
+ * @params {Object} res - The response object.
+*/
 exports.updateAccountDetails = async function(req,res){
     try{
         const userDetails = req.body
@@ -944,7 +1036,11 @@ exports.updateAccountDetails = async function(req,res){
     }
 }
 
-// function executes to recover cancel users subscription 
+/**
+ * To  cancel users subscription .
+ * @params {Object} req - The request object => ({id}).
+ * @params {Object} res - The response object.
+*/
 exports.cancelSubscription = async function(req,res){
     try{
         const data = req.body

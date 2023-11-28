@@ -96,7 +96,6 @@ router.post('/user/send/forgot-password',AuthController.sendForgotPassLink)
 router.post('/user/forgot-password',AuthController.forgotPassword)
 router.post('/user/update-account-details',auth_middleware.auth,AuthController.updateAccountDetails)
 router.post('/user/cancel-subscription',auth_middleware.auth,AuthController.cancelSubscription)
-router.post('/user/update-subscription-type', auth_middleware.auth,AuthController.updateSubscriptionType);
 router.get('/fetchUser/:userId', AuthController.fetchUser);
 
 router.post('/update-plan-price/:activeTab', auth_middleware.auth,AdminController.updatePlanPrice);

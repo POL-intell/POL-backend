@@ -50,7 +50,7 @@ const registerUser = async (userDetails)=>{
        console.log("Error in registerUser",err)
        return{message: "something went wrong", status: false};
     }
-   }
+}
    
 const hashPassword = (password, saltRounds)=>{
        return new Promise((resolve, reject) => {
@@ -62,7 +62,7 @@ const hashPassword = (password, saltRounds)=>{
            }
          });
        });
-   }
+}
    
 const checkDiscount = async(user)=>{
        try{
@@ -82,7 +82,7 @@ const checkDiscount = async(user)=>{
            console.log("Error in checkDiscount",err)
            return {status:false}
        }
-   }
+}
    
 const createAndUpdateCustomerStripe = async(user,discountObj,stripeToken,card_src,amount_paid)=>{
     try{
@@ -140,7 +140,6 @@ const createAndUpdateCustomerStripe = async(user,discountObj,stripeToken,card_sr
        }
       
 }
-
 
 const updatePerAppQuantity = async (data)=>{
     try{
@@ -228,6 +227,7 @@ const updatePerMinuteQuantity = async function(data){
         // return
     }
 }
+
 const delay = ms => new Promise(res => setTimeout(res, ms));
 
 const generateRandomString = () => {
@@ -243,17 +243,13 @@ const generateRandomString = () => {
   
       resolve(randomString);
     });
-  };
+};
   
-
-
 const getDateDiff = async(userDetails)=>{
     const currentDate = new Date();
-    const startingDate =  new Date(userDetails?.starting_date)
+    const startingDate =  new Date(userDetails?.user_plan[0]?.created_at)
     const formattedCurrentDate = `${currentDate.getFullYear()}-${(currentDate.getMonth() + 1).toString().padStart(2, '0')}-${currentDate.getDate().toString().padStart(2, '0')}`;
-    console.log("formattedCurrentDate",formattedCurrentDate , new Date(formattedCurrentDate).getTime()) 
     const formattedStartingDate = `${startingDate.getFullYear()}-${(startingDate.getMonth() + 1).toString().padStart(2, '0')}-${startingDate.getDate().toString().padStart(2, '0')}`;
-    console.log("formattedStartingDate",formattedStartingDate,new Date(formattedStartingDate).getTime()) 
     return (formattedCurrentDate == formattedStartingDate)
 }
 
