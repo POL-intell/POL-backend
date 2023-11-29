@@ -4,7 +4,7 @@ let knex = require('knex');
 let knexfile = require('../knexfile.js');
 let db = knex(knexfile.development);
 const stripe = require('stripe')(process.env.TEST_STRIPE_KEY);
-const {isOneDayOrLessLeft,updatePerMinuteQuantity,delay,checkDiscount} = require("../utils/index.js");
+const {isOneDayOrLessLeft,updatePerMinuteQuantity,delay,checkDiscount, updatePerAppQuantity} = require("../utils/index.js");
 
 const  updatePerMinuteQuantityScheduler= cron.schedule('10 42  11 * * *', async () => {
   try{
@@ -14,7 +14,7 @@ const  updatePerMinuteQuantityScheduler= cron.schedule('10 42  11 * * *', async 
 
       for(let k in allUsers){   
         try{
-          let user_data =  await User.where({'ID': allUsers[k].ID}).fetch({ withRelated: ['plan_detail',{'user_plan': (qb) => {
+          let user_data =  await User.where({'ID': allUsers[k].ID, 'trail_status': ['end', null] }).fetch({ withRelated: ['plan_detail',{'user_plan': (qb) => {
             qb.where('is_active', true).limit(1);
           }}, {'discount': (qb) => {
             qb.where('is_active', true)
@@ -44,6 +44,7 @@ const  updatePerMinuteQuantityScheduler= cron.schedule('10 42  11 * * *', async 
                 "subscripton_id" : user_data.user_plan[0].subscription_id
               }
               await updatePerMinuteQuantity(data)
+              // await updatePerAppQuantity(data)
             }
           }
         }catch{

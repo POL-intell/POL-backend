@@ -3,7 +3,14 @@ const User = require("../models/User");
 const Discount = require("../models/Discount");
 const stripe = require('stripe')(process.env.TEST_STRIPE_KEY);
 const bcrypt = require('bcrypt');
+const NewPlans = require('../models/NewPlans');
 
+
+/**
+ * To register user and save details to the database.
+ * @params (userDetails)  - The userDetails object has user details.
+ * @return (message,status,user)  - The response object conatins message, status and user details .
+*/
 const registerUser = async (userDetails)=>{
     try{
         const count = await User.where({}).count()
@@ -51,7 +58,12 @@ const registerUser = async (userDetails)=>{
        return{message: "something went wrong", status: false};
     }
 }
-   
+ 
+/**
+ * To hash password.
+ * @params (password,saltRounds)  - The password and saltRounds.
+ * @return (hash)  - The response object conatins hashed password .
+*/
 const hashPassword = (password, saltRounds)=>{
        return new Promise((resolve, reject) => {
          bcrypt.hash(password, saltRounds, (err, hash) => {
@@ -63,7 +75,12 @@ const hashPassword = (password, saltRounds)=>{
          });
        });
 }
-   
+  
+/**
+ * To cehck discount.
+ * @params (user)  - The user object.
+ * @return (status,coupon)  - The response object conatins status and coupon details object.
+*/
 const checkDiscount = async(user)=>{
        try{
            let count = await Discount.where({ 'is_active': 1 , 'type' : 'user_specific', 'user_id':user.ID}).count();
@@ -83,7 +100,12 @@ const checkDiscount = async(user)=>{
            return {status:false}
        }
 }
-   
+
+/**
+ * To create and customer .
+ * @params (user)  - The user object.
+ * @return (status,coupon)  - The response object conatins status and coupon details object.
+*/
 const createAndUpdateCustomerStripe = async(user,discountObj,stripeToken,card_src,amount_paid)=>{
     try{
            if(user.customer_id === null){
@@ -201,7 +223,7 @@ function isOneDayOrLessLeft(targetTime) {
     }
 }
   
-const updatePerMinuteQuantity = async function(data){
+const updatePerMinuteQuantity = async function(user_data){
     try{
         await delay(1000)
         let subscription = await stripe.subscriptions.retrieve(
@@ -253,4 +275,109 @@ const getDateDiff = async(userDetails)=>{
     return (formattedCurrentDate == formattedStartingDate)
 }
 
-module.exports = {registerUser,hashPassword,checkDiscount,createAndUpdateCustomerStripe,updatePerAppQuantity,transporter,replaceEmailConstantsWithValues,isOneDayOrLessLeft,updatePerMinuteQuantity,delay,generateRandomString,getDateDiff}
+const getPlanDetails = async (response, userDetails) => {
+    return Promise.resolve().then(async () => {
+        let plan_detail;
+
+        if (response?.user?.first_thousand === 1) {
+            plan_detail = await NewPlans.where({ 'plan_name': userDetails?.plan_name }).fetch({
+                withRelated: [{
+                    'plans_pricing': (qb) => {
+                        qb.where('for_thousand', 1);
+                    }
+                }]
+            });
+        } else {
+            plan_detail = await NewPlans.where({ 'plan_name': userDetails?.plan_name }).fetch({
+                withRelated: [{
+                    'plans_pricing': (qb) => {
+                        qb.where('for_thousand', 0);
+                    }
+                }]
+            });
+        }
+
+        plan_detail = plan_detail.toJSON();
+
+        let per_minute_price_id = userDetails.plan_term === 'monthly' ? plan_detail?.plans_pricing[0]?.monthly_per_minute_price_id : plan_detail?.plans_pricing[0]?.yearly_per_minute_price_id;
+
+        let per_app_price_id = userDetails.plan_term === 'monthly' ? plan_detail?.plans_pricing[0]?.monthly_price_id : plan_detail?.plans_pricing[0]?.yearly_price_id;
+
+        let amount_paid = userDetails.plan_term === 'monthly' ? parseInt(plan_detail?.plans_pricing[0]?.monthly_per_app * 5) : parseInt(plan_detail?.plans_pricing[0]?.yearly_per_app * 5);
+
+        let span = userDetails.plan_term === 'monthly' ? 'M' : 'A';
+
+        return {
+            plan_detail,
+            per_minute_price_id,
+            per_app_price_id,
+            amount_paid,
+            span
+        };
+    });
+};
+
+const generateSubscriptionObject = async (customerId, perAppPriceId, perMinutePriceId, userDetails) => {
+    return Promise.resolve().then(() => {
+        let items = [
+            {
+                price: perAppPriceId,
+                quantity: 5
+            },
+            {
+                price: perMinutePriceId,
+                quantity: 0
+            },
+        ];
+
+        let subObj = {
+            customer: customerId,
+            items: items,
+        };
+        console.log("userDetails.trail_start",typeof userDetails.trail_start)
+        if(userDetails.trail_start === true) {
+            console.log("in if");
+            subObj.trial_period_days = 30;
+            return subObj;
+        }else {
+            return subObj;
+        }
+    });
+};
+
+const generateUpdateObject = async (planDetail, span, userDetails) => {
+    return Promise.resolve().then(() => {
+        let updateObj = {
+            'type': planDetail?.code,
+            'span': span,
+            'subscription_status': 1
+        };
+
+        if (userDetails?.trail_start) {
+            console.log("in if");
+            updateObj.trail_start_date = new Date();
+            updateObj.trail_status = "start";
+            return updateObj;
+        } else {
+            return updateObj;
+        }
+    });
+};
+
+
+async function getTrialStatus(subscription){
+    console.log("subscription",subscription)
+    let today = new Date().getTime()
+    console.log(today)
+    console.log("subscription.trail_end",subscription.trial_end)
+    let trialEnd = subscription.trial_end * 1000
+    trialEnd = new Date(trialEnd).getTime()
+    console.log("trialEnd",trialEnd)
+    console.log(trialEnd)
+    if(trialEnd <= today){
+        return true
+    }else{
+        return false
+    }
+}
+module.exports = {registerUser,hashPassword,checkDiscount,createAndUpdateCustomerStripe,updatePerAppQuantity,transporter,replaceEmailConstantsWithValues,isOneDayOrLessLeft,updatePerMinuteQuantity,delay,generateRandomString,getDateDiff,getPlanDetails, generateSubscriptionObject, generateUpdateObject, getTrialStatus}
