@@ -14,7 +14,7 @@ var jwt = require('jsonwebtoken');
 const UserPlans = require('../models/UserPlans');
 const PlansForThousands = require("../models/Plans_for_thousands")
 const Discount = require('../models/Discount');
-const {registerUser,checkDiscount,createAndUpdateCustomerStripe,updatePerAppQuantity,hashPassword,generateRandomString, getDateDiff, getPlanDetails,  generateSubscriptionObject, generateUpdateObject, getTrialStatus}  = require("../utils/index")
+const {registerUser,checkDiscount,createAndUpdateCustomerStripe,updatePerAppQuantity,updatePerMinuteQuantity,hashPassword,generateRandomString, getDateDiff, getPlanDetails,  generateSubscriptionObject, generateUpdateObject, getTrialStatus}  = require("../utils/index")
 const {sendForgotPasswordEmail,newRegistrationEmail} = require("../services/EmalServices");
 const NewPlans = require('../models/NewPlans');
 
@@ -673,10 +673,12 @@ exports.updateUserDetailsHook = async function(req,res){
         let userDetails = await User.where({'customer_id': object?.customer}).fetch({ withRelated: [{'user_plan': (qb) => {
             qb.where('is_active', true).limit(1);
         }}] });
+        
         userDetails = userDetails.toJSON();
 
         const per_app_item = subscription.items.data.find(item => item.price.id === userDetails?.user_plan[0]?.per_app_price_id);
-        let per_minute_quantity = 0
+        const per_minute_item = subscription.items.data.find(item => item.price.id === userDetails.user_plan[0]?.per_minute_price_id);
+        let per_minute_quantity = per_minute_item?.quantity
         
         try{
             await User.where({ 'ID': userDetails?.ID }).save({
@@ -715,17 +717,16 @@ exports.updateUserDetailsHook = async function(req,res){
         let isTrialEnded = userDetails?.trail_status === "start" ? await getTrialStatus(subscription) : false
         console.log("isTrialEnded",isTrialEnded)
         if(isTrialEnded){
-            await User.where({ 'ID': user.ID }).save({
+            await User.where({ 'ID': userDetails?.ID }).save({
                 'trail_status': "end",
                 'trail_end_date': new Date(),
             }, { patch: true });
         }
 
         let getDateDifference = await getDateDiff(userDetails)
-        if(userDetails?.user_plan[0]?.per_minute_price_id  !== null && !getDateDifference && subscription.trail_start == null){
-            const per_minute_item = subscription.items.data.find(item => item.price.id === userDetails.user_plan[0]?.per_minute_price_id);
+        if(userDetails?.user_plan[0]?.per_minute_price_id  !== null && !getDateDifference &&  (userDetails?.trail_status === "end" ||  userDetails?.trail_status === null )){
             if(per_minute_item){
-                per_minute_quantity = per_minute_item?.quantity
+                // per_minute_quantity = per_minute_item?.quantity
                 await stripe.subscriptqionItems.update(
                     per_minute_item.id,
                     {
@@ -800,8 +801,6 @@ exports.registerWithTestPlan = async function(req,res){
 exports.registerWithPaidPlan = async function(req,res){
     try{
         let userDetails = req.body
-        console.log("userDetails",userDetails)
-
         const stripeToken = req.body?.token?.id
         const card_src = req.body.token.card.id
         const renewal_plan = userDetails?.renewal === true ? 1 : 0
@@ -822,9 +821,9 @@ exports.registerWithPaidPlan = async function(req,res){
                 message : response.message
             });
         }else{
-            let { plan_detail, per_minute_price_id, per_app_price_id, amount_paid, span } = await getPlanDetails(response, userDetails);
+            let { plan_detail, per_minute_price_id, per_app_price_id, span } = await getPlanDetails(response, userDetails);
             const isDiscount = await checkDiscount(response.user) 
-            const customer = await createAndUpdateCustomerStripe(response.user,isDiscount,stripeToken,card_src,amount_paid)
+            const customer = await createAndUpdateCustomerStripe(response.user,isDiscount,stripeToken,card_src)
             if(customer.status){   
                 let subObj = await generateSubscriptionObject(customer.customerId, per_app_price_id, per_minute_price_id, userDetails);
                 console.log("subObj",subObj)
@@ -832,7 +831,6 @@ exports.registerWithPaidPlan = async function(req,res){
 
                 if(subscription && subscription?.id){
                     let updateObj = await generateUpdateObject(plan_detail, span, userDetails);
-                    console.log("updateObj",updateObj)
                     await User.where({ 'ID': response.user.ID }).save(updateObj, { patch: true });
                     let user_plan_obj = {
                         'user_id': response.user.ID,
@@ -1052,4 +1050,122 @@ exports.cancelSubscription = async function(req,res){
     }
 }
 
+/**
+ * To  cancel users subscription .
+ * @params {Object} req - The request object => ({id}).
+ * @params {Object} res - The response object.
+*/
+exports.upgradePlan = async function(req,res){
+    try{
+        const data = req.body
+        const userDetails = await getUserData(data.userId)
+        console.log("userDetails",userDetails)
+
+        const renewal_plan = userDetails?.renewal === true ? 1 : 0
+       
+        await stripe.subscriptions.cancel(userDetails?.user_plan[0]?.subscription_id);
+        await User.where({ 'ID':data.userId }).save({
+            'subscription_status' :0,
+        }, { patch: true });
+        await UserPlans.where({'user_id' :data.userId }).save({
+            'is_active' : 0,
+        },{patch: true })
+        let plan_detail;
+        if (userDetails?.first_thousand === 1) {
+            plan_detail = await NewPlans.where({ 'plan_name': data?.plan_name }).fetch({
+                withRelated: [{
+                    'plans_pricing': (qb) => {
+                        qb.where('for_thousand', 1);
+                    }
+                }]
+            });
+        }else{
+            plan_detail = await NewPlans.where({ 'plan_name': data?.plan_name }).fetch({
+                withRelated: [{
+                    'plans_pricing': (qb) => {
+                        qb.where('for_thousand', 0);
+                    }
+                }]
+            });
+        }
+
+        plan_detail = plan_detail.toJSON();
+
+        let per_minute_price_id = data.plan_term === 'monthly' ? plan_detail?.plans_pricing[0]?.monthly_per_minute_price_id : plan_detail?.plans_pricing[0]?.yearly_per_minute_price_id;
+
+        let per_app_price_id = data.plan_term === 'monthly' ? plan_detail?.plans_pricing[0]?.monthly_price_id : plan_detail?.plans_pricing[0]?.yearly_price_id;
+        let span = data.plan_term === 'monthly' ? 'M' : 'A';
+        const isDiscount = await checkDiscount(userDetails) 
+
+        let subObj = await generateSubscriptionObject(userDetails.customer_id, per_app_price_id, per_minute_price_id, userDetails);
+        console.log("subObj",subObj)
+        const subscription = await stripe.subscriptions.create(subObj)
+
+        if(subscription && subscription?.id){
+            let updateObj = await generateUpdateObject(plan_detail, span, userDetails);
+            await User.where({ 'ID': data.userId }).save(updateObj, { patch: true });
+            let user_plan_obj = {
+                'user_id': data.userId,
+                'subscription_id': subscription.id,
+                'is_active': 1,
+                'plan_type':data.plan_term,
+                'plan_id':plan_detail?.id,
+                'per_app_price_id': per_app_price_id,
+                'per_minute_price_id':per_minute_price_id,
+                'renewal_plan':renewal_plan
+            }
+            await new UserPlans(user_plan_obj).save(null, { method: 'insert' });
+            let updatePerMinuteData = {
+                'userId': data.userId,
+                "per_minute_price_id": per_minute_price_id,
+                "per_minute_quantity": userDetails.used,
+                "subscripton_id" : subscription?.id
+            }
+            await updatePerMinuteQuantity(updatePerMinuteData)
+            let user_files_count =  await UserFile.where({'user_id': data?.userId }).count();
+            if(user_files_count > 5 ){                
+                let updatePerAppData = {
+                    "subscripton_id":subscription?.id,
+                    "per_app_price_id": per_app_price_id, 
+                    "per_app_quantity": user_files_count
+                }
+                await updatePerAppQuantity(updatePerAppData)
+            }
+            res.status(200).send({
+                message: "Upgraded Successfully",
+                status: 1,
+            });
+        }else{
+            res.status(200).send({  
+                message: "Something went wrong.",
+                status: 0
+            });
+        }      
+    }catch(err){
+        console.log("Error in upgradePlan",err)
+        res.status(200).send({  
+            message: "Something went wrong.",
+            status: 0
+        });
+    }
+}
+
+
+/**
+ * To  cancel users subscription .
+ * @params {Object} req - The request object => ({id}).
+ * @params {Object} res - The response object.
+*/
+exports.validateCard = async function(req,res){
+    try{
+        const data = req.body
+        
+    }catch(err){
+        console.log("Error in updateAccountDetails",err)
+        res.status(200).send({  
+            message: "Something went wrong.",
+            status: 0
+        });
+    }
+}
 

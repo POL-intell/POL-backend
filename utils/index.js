@@ -106,13 +106,11 @@ const checkDiscount = async(user)=>{
  * @params (user)  - The user object.
  * @return (status,coupon)  - The response object conatins status and coupon details object.
 */
-const createAndUpdateCustomerStripe = async(user,discountObj,stripeToken,card_src,amount_paid)=>{
+const createAndUpdateCustomerStripe = async(user,discountObj,stripeToken,card_src)=>{
     try{
            if(user.customer_id === null){
                let customer;
                if(discountObj?.status){
-                   let discountAmount = (amount_paid * discountObj.coupon.discount_by_percentage) / 100;
-                   amount_paid = amount_paid - discountAmount
                    customer = await stripe.customers.create({
                        source: stripeToken,
                        description: 'By username : ' + user.username,
@@ -223,7 +221,7 @@ function isOneDayOrLessLeft(targetTime) {
     }
 }
   
-const updatePerMinuteQuantity = async function(user_data){
+const updatePerMinuteQuantity = async function(data){
     try{
         await delay(1000)
         let subscription = await stripe.subscriptions.retrieve(
@@ -303,7 +301,6 @@ const getPlanDetails = async (response, userDetails) => {
 
         let per_app_price_id = userDetails.plan_term === 'monthly' ? plan_detail?.plans_pricing[0]?.monthly_price_id : plan_detail?.plans_pricing[0]?.yearly_price_id;
 
-        let amount_paid = userDetails.plan_term === 'monthly' ? parseInt(plan_detail?.plans_pricing[0]?.monthly_per_app * 5) : parseInt(plan_detail?.plans_pricing[0]?.yearly_per_app * 5);
 
         let span = userDetails.plan_term === 'monthly' ? 'M' : 'A';
 
@@ -311,7 +308,6 @@ const getPlanDetails = async (response, userDetails) => {
             plan_detail,
             per_minute_price_id,
             per_app_price_id,
-            amount_paid,
             span
         };
     });
@@ -354,7 +350,6 @@ const generateUpdateObject = async (planDetail, span, userDetails) => {
         };
 
         if (userDetails?.trail_start) {
-            console.log("in if");
             updateObj.trail_start_date = new Date();
             updateObj.trail_status = "start";
             return updateObj;

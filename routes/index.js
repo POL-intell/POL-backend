@@ -104,4 +104,5 @@ router.post('/createCoupon', auth_middleware.auth,AdminController.createCoupon);
 router.get('/fetchActiveCoupon', auth_middleware.auth,AdminController.fetchActiveCoupon);
 
 router.post('/update-payment&last_charge',AuthController.updateUserDetailsHook)
+router.post('/upgradePlan',auth_middleware.auth,AuthController.upgradePlan)
 module.exports = router;

@@ -44,7 +44,6 @@ const  updatePerMinuteQuantityScheduler= cron.schedule('10 42  11 * * *', async 
                 "subscripton_id" : user_data.user_plan[0].subscription_id
               }
               await updatePerMinuteQuantity(data)
-              // await updatePerAppQuantity(data)
             }
           }
         }catch{
