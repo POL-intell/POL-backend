@@ -334,8 +334,6 @@ exports.getValueFromResultSet = async function (resultSet, row, col, edge_point 
 
 //to make the function buffer
 exports.makeFunctionbuffer = async function (fn, tableInfo) {
-
-
 	return new Promise((resolve, reject) => {
 
 		var fn_buffer = [];
@@ -344,22 +342,20 @@ exports.makeFunctionbuffer = async function (fn, tableInfo) {
 		var right_side = fn.split('=')[1];
 		right_side = right_side.split(" ").join("")
 		var left_side = fn.split('=')[0];
-
 		var pointers_arr = [];
 		var string = "";
 		var last_operator = "";
 		//console.log('rrrrrr',right_side)
 		for (p = 0; p < right_side.length; p++) {
 			var txt = right_side[p];
-
 			//console.log(right_side[p],'rrrrr ppp',right_side[p-1])
-
 
 			if ((txt == '+' || txt == '-' || txt == '/' || txt == '*') && (right_side[p - 1] == ']' || !isNaN(string))) {
 				//console.log('herreeeee',string,last_operator)
 				if (pointers_arr.length > 0) {
 					pointers_arr.push(last_operator + string);
 				} else {
+					console.log("HERE1111")
 					pointers_arr.push(string);
 				}
 				last_operator = txt
@@ -381,53 +377,24 @@ exports.makeFunctionbuffer = async function (fn, tableInfo) {
 		var output_column = left_side.split('(')[1].split(',')[0];
 		var edge_point = left_side.split('(')[1].split(',')[1].split(')')[0];
 		var pointers = pointers_arr;
-		//  var pointers = right_side.split(']');
-		//  console.log(pointers,'pointers')
-		// for (var p = 0; p < pointers.length; p++) {
-		// 	if (pointers[p] != '') {
 
-		// 		var vTable = pointers[p].split(':')[0];
-
-		// 		if (p > 0) {
-		// 			vTable = pointers[p].split(':')[0].slice(1);
-		// 			skeleton = skeleton + '~' + pointers[p].split(':')[0].charAt(0);
-		// 		}
-
-		// 		var p_col = pointers[p].split(':[')[1].split(',')[0];
-		// 		console.log(pointers[p].split(',')[1],parseInt(pointers[p].split(',')[1]),'pointers[p]')
-		// 		var p_row = pointers[p].split(',')[1];
-
-		// 		var cp = parseInt(output_column) + parseInt(p_col)
-		// 		var rr = p_row
-		// 		fn_buffer.push({
-		// 			vTable: tableInfo,
-		// 			cp: cp,
-		// 			rr: rr,
-		// 			output_column: output_column,
-		// 			virtual_table: vTable
-		// 		});
-		// 	}
-		// 	console.log('skeleton',skeleton)
-		// }
 		var last_num_pointer = false
 		for (var p = 0; p < pointers.length; p++) {
 			//console.log(pointers[p],'pointers[p]pointers[p]',pointers.length,p)
 			if (pointers[p] != '') {
-
 				var ptr = pointers[p];
+				console.log("ptr",ptr)
 				//if any operator is in starting
 				var is_pointer = ptr.charAt(0);
 				if (is_pointer == '+' || is_pointer == '-' || is_pointer == '/' || is_pointer == '*') {
 					ptr = ptr.replace(is_pointer, '');
 				}
-
-
+				console.log("isNaN(ptr)",ptr,isNaN(ptr))
 				if (!isNaN(ptr)) {
 					fn_buffer.push({
 						vTable: tableInfo,
 						output_column: output_column,
 						value: ptr
-
 					});
 					if (p > 0) {
 						if (last_num_pointer) {
@@ -435,7 +402,6 @@ exports.makeFunctionbuffer = async function (fn, tableInfo) {
 						} else {
 							skeleton = skeleton + '~' + pointers[p];
 						}
-
 
 					} else {
 						skeleton = skeleton + pointers[p];
@@ -476,7 +442,7 @@ exports.makeFunctionbuffer = async function (fn, tableInfo) {
 			}
 
 			//console.log('skeleton',skeleton)
-		}
+		}                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
 
 		console.log('fn_buffer', skeleton, fn_buffer)
 		if (!last_num_pointer) {
