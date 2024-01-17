@@ -305,7 +305,6 @@ exports.execuatePoll = async function (req, res) {
       let function_type_If = fn.function.function.split(')=')[1].startsWith('~IF') ? true : false    
       if(function_type_If){
         const edge_point = fn.function.function.split('=')[0].split('(')[1].split(',')[1].split(')')[0];
-        console.log("edge_point",edge_point)
         let {condition,truePart,falsePart} = fn.function.allOtherInfo
         let {condition_left_side,conditional_operator,condition_right_side} = splitCondition(condition.data) 
         let getEquationForLeftSideCondition = await processFunction(condition_left_side)
@@ -340,7 +339,6 @@ exports.execuatePoll = async function (req, res) {
         var fbuffer = fbuffers.fn_buffer
         var skeleton = fbuffers.skeleton
         var edge_point = fbuffers.edge_point
-        console.log("edge_point",edge_point)
         var neg_rows_indexes = fbuffer.filter((t) => t.rr < 0).map((t) => t.rr)
         var REC = 0;
         var N = 0;
@@ -360,7 +358,6 @@ exports.execuatePoll = async function (req, res) {
           REC = fn.function.output_row - 1
           M = REC;
         }
-        console.log("REC",REC)
         for (var i = REC; i <= M; i++) {
           if (break_loop) {
             break;
@@ -498,7 +495,6 @@ async function processFinalEquation(inputArray,index,edge_point) {
       if (typeof element === 'object' && element !== null) {
           // Process object type element with a different formula
           // For example, assuming there's a function getValueFromObject to get a value from the object
-          console.log("edge_point",edge_point)
           let valueFromObject = (edge_point == 0 || edge_point == 2) ? null : 0
           if(element.all_col_values[index+ element.rr] === undefined && valueFromObject == null) break;
           if(index + element.rr >= 0){
