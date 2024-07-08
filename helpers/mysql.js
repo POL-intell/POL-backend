@@ -114,9 +114,8 @@ exports.getUniqueCol = async function (config, table) {
         makeConnection(config).then((db) => {
 
             if (db && db.status == 1) {
-                db.connection.query("SELECT K.COLUMN_NAME,T.CONSTRAINT_TYPE FROM  INFORMATION_SCHEMA.TABLE_CONSTRAINTS T JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE K ON K.CONSTRAINT_NAME=T.CONSTRAINT_NAME  WHERE K.TABLE_NAME='" + table + "' group by K.COLUMN_NAME,T.CONSTRAINT_TYPE"
+                      db.connection.query("SELECT K.COLUMN_NAME,T.CONSTRAINT_TYPE FROM  INFORMATION_SCHEMA.TABLE_CONSTRAINTS T JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE K ON K.CONSTRAINT_NAME=T.CONSTRAINT_NAME  WHERE K.TABLE_NAME='" + table + "' AND K.TABLE_SCHEMA='" + config?.database + "' group by K.COLUMN_NAME,T.CONSTRAINT_TYPE"
                     , function (error, results) {
-                        console.log(results)
                         if (results.length > 0) {
                             var cols = results.map((e) => e.COLUMN_NAME)
                             resolve({ cols: cols, status:1 })
@@ -354,16 +353,13 @@ exports.checkTableExistence = async function (dbDetails, tableName) {
         makeConnection(dbDetails)
             .then((db) => {
                 if (db && db.status === 1) {
-                    console.log("tableName",tableName)
-                    const checkTableQuery = `SELECT table_name FROM information_schema.TABLES WHERE table_name = ?`;
-                    console.log("checkTableQuery",checkTableQuery)
-                    db.connection.query(checkTableQuery, [tableName], function (checkTableError, checkTableResult) {
+                    const checkTableQuery = `SELECT table_name FROM information_schema.TABLES WHERE table_name = ? AND table_schema = ?`;
+                    
+                    db.connection.query(checkTableQuery, [tableName, dbDetails.database], function (checkTableError, checkTableResult) {
                         if (checkTableError) {
-                            console.log('checkTableError', checkTableError);
                             reject(checkTableError);
                         } else {
                             // Check if exactly one table with the provided tableName exists
-                            console.log(checkTableResult)
                             if(checkTableResult.length >0){
                                 resolve(checkTableResult);
                             }else{

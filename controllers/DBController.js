@@ -347,6 +347,7 @@ exports.addColumn = async function (req, res) {
   try {
 
     var result = await DBHelper.addPolColumn(dbDetails, dbTable);
+    
     res.status(200).send({
       status: 1,
       message: 'Pol column added successfully.'
@@ -395,7 +396,7 @@ exports.checkUniqueCol = async function(req,res){
         message:message
       })
     }catch(err){
-      console.log("Inside catch")
+      console.log("Inside catch",err )
       return res.status(200).send({
         status:0,
         permission:0,

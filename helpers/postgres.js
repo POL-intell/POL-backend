@@ -247,17 +247,16 @@ exports.addPolColumn = async function (config, table) {
 
 /* To check user permission to update database or tables  */
 exports.checkPrivilige = async function(config,table){
+
     return new Promise((resolve,reject)=>{
-        console.log("config",config)
         makeConnection(config).then((db) =>{
             if(db && db.status ==1){
                 let q = `SELECT COUNT(*) FROM information_schema.role_table_grants WHERE grantee=$1 AND privilege_type=$2 AND table_catalog=$3 AND is_grantable=$4 AND table_name =$5;`
-                db.connection.query(q, function (error, results) {
+                db.connection.query(q, [config.username, 'UPDATE', config.database, 'YES', table], function (error, results) {
                     if (error) {
                         reject({status:0})
                     } else {
-                       console.log("results",results)
-                    //    resolve({status:1})
+                       resolve({status:1})
                     }
                 });
             }else{
